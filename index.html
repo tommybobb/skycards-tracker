@@ -976,6 +976,50 @@ const ALL_REGS = Object.values(FULL_FLEET).flat();
 //  STORAGE
 // ============================================================
 const STORE_KEY = 'skycards_a380_v1';
+const MODELS_KEY = 'skycards_models_v1';
+
+// Accurate fleet count sourced from the Skycards models API.
+// null means not yet fetched — falls back to ALL_REGS.length.
+let modelFleetSize = null;
+
+function loadModelCache() {
+  try {
+    const raw = localStorage.getItem(MODELS_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (typeof data.a380Count === 'number') modelFleetSize = data.a380Count;
+      return data;
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function fetchModelSync() {
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(MODELS_KEY) || 'null'); } catch(e) {}
+  const updatedAt = cached?.updatedAt || 0;
+  try {
+    const res = await fetch(`https://api.skycards.oldapes.com/models?updatedAt=${updatedAt}`);
+    if (!res.ok) return;
+    const json = await res.json();
+    // Find the A380 model row (id A388 or name containing "380")
+    const a380Row = Array.isArray(json.rows)
+      ? json.rows.find(r => r.id === 'A388' || (typeof r.name === 'string' && r.name.includes('380')))
+      : null;
+    // If A380 not in rows it hasn't changed — keep cached count
+    const newCount = a380Row ? a380Row.num : (cached?.a380Count ?? null);
+    if (typeof newCount === 'number') {
+      modelFleetSize = newCount;
+      localStorage.setItem(MODELS_KEY, JSON.stringify({
+        updatedAt: json.updatedAt ?? updatedAt,
+        a380Count: newCount,
+        fetchedAt: Date.now()
+      }));
+      updateHeaderChip();
+      refreshCurrentView();
+    }
+  } catch(e) { /* offline or CORS — keep cached value */ }
+}
 
 function loadStore() {
   try {
@@ -1001,7 +1045,7 @@ function getSightings() { return store.sightings; }
 function computeStats() {
   const s = getSightings();
   const caught = Object.keys(s).length;
-  const totalFleet = ALL_REGS.length;
+  const totalFleet = modelFleetSize ?? ALL_REGS.length;
   const totalCards = Object.values(s).reduce((a, v) => a + v.count, 0);
   const glowCount = Object.values(s).filter(v => v.special).length;
   return { caught, totalFleet, totalCards, glowCount };
@@ -1042,7 +1086,10 @@ function renderOverview() {
   document.getElementById('overall-pct').textContent = pct + '%';
   document.getElementById('overall-fill').style.width = pct + '%';
   document.getElementById('overall-sub-left').textContent = `${caught} of ${totalFleet} caught`;
-  document.getElementById('overall-sub-right').textContent = `${totalFleet - caught} remaining`;
+  const missingLabel = modelFleetSize !== null && modelFleetSize > ALL_REGS.length
+    ? `${totalFleet - caught} remaining (${modelFleetSize - ALL_REGS.length} regs unknown)`
+    : `${totalFleet - caught} remaining`;
+  document.getElementById('overall-sub-right').textContent = missingLabel;
 
   document.getElementById('airline-grid').innerHTML = Object.entries(FULL_FLEET).map(([airline, regs]) => {
     const meta = AIRLINES_META[airline] || { color: '#666', flag: '✈️' };
@@ -1706,12 +1753,15 @@ document.addEventListener('keydown', e => {
 //  INIT
 // ============================================================
 populateAirlineDropdowns();
+loadModelCache();   // restore last-known fleet size before first render
 updateHeaderChip();
 const _initTab = location.hash.slice(1) || 'overview';
 history.replaceState({ tab: _initTab }, '', '#' + _initTab);
 if (_initTab !== 'overview') switchTab(_initTab, false);
 else renderOverview();
 initSync();
+fetchModelSync();                              // immediate check on load
+setInterval(fetchModelSync, 30 * 60 * 1000);  // then every 30 minutes
 </script>
 </body>
 </html>
