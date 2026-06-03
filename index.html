@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyCards A380 Tracker</title>
+  <style>
+    :root {
+      --bg: #0b0f1e;
+      --bg-card: #131829;
+      --bg-input: #0e1220;
+      --text: #e4e8f5;
+      --text-muted: #7a86a3;
+      --border: #222d47;
+      --accent: #4a8fff;
+      --accent-glow: rgba(74,143,255,0.25);
+      --success: #3dca6e;
+      --warn: #f5a623;
+      --danger: #e55353;
+      --glow-color: #ffe066;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      background: linear-gradient(135deg, #0a112b 0%, #0f1e47 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0.9rem 1.75rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+    }
+
+    .logo-icon { font-size: 1.7rem; }
+
+    .logo-text h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .logo-text p {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .progress-chip {
+      background: var(--accent-glow);
+      border: 1px solid rgba(74,143,255,0.35);
+      border-radius: 20px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.82rem;
+      color: var(--accent);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .btn-icon {
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.4rem 0.75rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon:hover { color: var(--text); border-color: var(--accent); }
+
+    /* ---- NAV ---- */
+    nav {
+      display: flex;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.75rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    nav::-webkit-scrollbar { display: none; }
+
+    .nav-tab {
+      padding: 0.8rem 1.1rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ---- MAIN ---- */
+    main {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.5rem 1.75rem 5rem;
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ---- HERO STATS ---- */
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-stat {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1rem;
+      text-align: center;
+    }
+
+    .hero-stat-value {
+      font-size: 2.1rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .hero-stat-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    /* ---- OVERALL PROGRESS BAR ---- */
+    .overall-progress-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .overall-progress-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+      font-size: 0.82rem;
+    }
+
+    .overall-progress-label span:first-child { color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; font-size: 0.75rem; }
+    .overall-progress-label span:last-child { color: var(--accent); font-weight: 700; }
+
+    .progress-track {
+      background: var(--border);
+      border-radius: 6px;
+      height: 12px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #4a8fff, #9b59ff);
+      transition: width 0.6s ease;
+    }
+
+    .progress-sublabel {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* ---- AIRLINE CARDS ---- */
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      margin-bottom: 0.85rem;
+    }
+
+    .airline-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.85rem;
+    }
+
+    .airline-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.1rem 1.2rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    .airline-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      border-color: #333d58;
+    }
+
+    .airline-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .airline-flag { font-size: 1.3rem; }
+
+    .airline-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .airline-score {
+      font-size: 1rem;
+      font-weight: 800;
+    }
+
+    .small-progress-track {
+      background: var(--border);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+      margin-bottom: 0.35rem;
+    }
+
+    .small-progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    .airline-card-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* ---- CONTROLS ROW ---- */
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      color: var(--text);
+      font-size: 0.87rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-input:focus { border-color: var(--accent); }
+
+    .filter-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem 0.9rem;
+      color: var(--text);
+      font-size: 0.87rem;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .filter-select:focus { border-color: var(--accent); }
+    .filter-select option { background: var(--bg-card); }
+
+    /* ---- AIRCRAFT GRID ---- */
+    .aircraft-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.65rem;
+    }
+
+    .aircraft-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 0.75rem 0.75rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .aircraft-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .aircraft-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+      border-color: #333d58;
+    }
+
+    .aircraft-card.uncaught {
+      opacity: 0.38;
+    }
+    .aircraft-card.uncaught:hover {
+      opacity: 0.7;
+      transform: translateY(-2px);
+    }
+
+    .aircraft-card.glow-card {
+      box-shadow: 0 0 12px rgba(255, 224, 102, 0.3);
+      border-color: rgba(255, 224, 102, 0.4);
+    }
+
+    .aircraft-reg {
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .aircraft-airline-label {
+      font-size: 0.67rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .aircraft-badges {
+      display: flex;
+      justify-content: center;
+      gap: 0.3rem;
+      margin-top: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      border-radius: 10px;
+      padding: 0.1rem 0.45rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+
+    .badge-count {
+      background: rgba(74,143,255,0.2);
+      color: var(--accent);
+      border: 1px solid rgba(74,143,255,0.3);
+    }
+
+    .badge-glow {
+      background: rgba(255,224,102,0.2);
+      color: var(--glow-color);
+      border: 1px solid rgba(255,224,102,0.35);
+    }
+
+    .badge-lowconf {
+      background: rgba(245,166,35,0.15);
+      color: var(--warn);
+      border: 1px solid rgba(245,166,35,0.3);
+    }
+
+    /* ---- MISSING VIEW ---- */
+    .airline-section { margin-bottom: 2rem; }
+
+    .airline-section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .airline-section-header .airline-name { font-size: 0.95rem; font-weight: 600; }
+
+    .missing-tag {
+      margin-left: auto;
+      background: rgba(229,83,83,0.15);
+      color: var(--danger);
+      border: 1px solid rgba(229,83,83,0.3);
+      border-radius: 10px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .complete-tag {
+      margin-left: auto;
+      background: rgba(61,202,110,0.15);
+      color: var(--success);
+      border: 1px solid rgba(61,202,110,0.3);
+      border-radius: 10px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    /* ---- FAB ---- */
+    .fab {
+      position: fixed;
+      bottom: 1.75rem;
+      right: 1.75rem;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-size: 1.6rem;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(74,143,255,0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+      z-index: 150;
+      line-height: 1;
+    }
+    .fab:hover { transform: scale(1.1); box-shadow: 0 6px 24px rgba(74,143,255,0.6); }
+
+    /* ---- MODAL ---- */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .modal h2 { font-size: 1.1rem; margin-bottom: 1.25rem; }
+
+    .form-group { margin-bottom: 1rem; }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-input::placeholder { color: var(--text-muted); }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.87rem;
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    .btn {
+      padding: 0.65rem 1.35rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+
+    .modal-actions-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.5rem;
+    }
+
+    /* ---- EMPTY STATE ---- */
+    .empty { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* ---- TOAST ---- */
+    .toast {
+      position: fixed;
+      bottom: 5.5rem;
+      right: 1.75rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 1.1rem;
+      font-size: 0.85rem;
+      z-index: 300;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      transform: translateY(10px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ---- RESPONSIVE ---- */
+    @media (max-width: 600px) {
+      header { padding: 0.75rem 1rem; }
+      main { padding: 1rem 1rem 5rem; }
+      nav { padding: 0 0.5rem; }
+      .aircraft-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+      .header-right .btn-icon { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">✈️</div>
+  <div class="logo-text">
+    <h1>SkyCards A380 Tracker</h1>
+    <p>Airbus A380 Fleet Collection</p>
+  </div>
+  <div class="header-right">
+    <div class="progress-chip" id="header-chip">Loading…</div>
+    <button class="btn-icon" onclick="exportData()" title="Export collection as JSON">Export</button>
+    <button class="btn-icon" onclick="triggerImport()" title="Import JSON backup">Import</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</header>
+
+<nav>
+  <div class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">Overview</div>
+  <div class="nav-tab" data-tab="collection" onclick="switchTab('collection')">My Collection</div>
+  <div class="nav-tab" data-tab="missing" onclick="switchTab('missing')">Missing</div>
+</nav>
+
+<main>
+  <!-- OVERVIEW -->
+  <div id="view-overview" class="view active">
+    <div class="hero-stats" id="hero-stats"></div>
+    <div class="overall-progress-card">
+      <div class="overall-progress-label">
+        <span>Overall Progress</span>
+        <span id="overall-pct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="overall-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-sublabel">
+        <span id="overall-sub-left">0 caught</span>
+        <span id="overall-sub-right">0 remaining</span>
+      </div>
+    </div>
+    <div class="section-title">By Airline — click a card to explore</div>
+    <div class="airline-grid" id="airline-grid"></div>
+  </div>
+
+  <!-- COLLECTION -->
+  <div id="view-collection" class="view">
+    <div class="controls">
+      <input type="text" class="search-input" id="col-search" placeholder="Search registration…" oninput="renderCollection()">
+      <select class="filter-select" id="col-airline" onchange="renderCollection()">
+        <option value="">All Airlines</option>
+      </select>
+      <select class="filter-select" id="col-sort" onchange="renderCollection()">
+        <option value="reg">A–Z</option>
+        <option value="count-desc">Most cards first</option>
+        <option value="count-asc">Fewest cards first</option>
+        <option value="airline">By airline</option>
+      </select>
+    </div>
+    <div id="col-count" style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem"></div>
+    <div class="aircraft-grid" id="collection-grid"></div>
+  </div>
+
+  <!-- MISSING -->
+  <div id="view-missing" class="view">
+    <div class="controls">
+      <select class="filter-select" id="miss-airline" onchange="renderMissing()">
+        <option value="">All Airlines</option>
+      </select>
+    </div>
+    <div id="missing-content"></div>
+  </div>
+</main>
+
+<button class="fab" onclick="openAddModal(null)" title="Log new sighting">+</button>
+
+<!-- ADD / EDIT MODAL -->
+<div class="modal-overlay" id="modal" onclick="onModalOverlayClick(event)">
+  <div class="modal">
+    <h2 id="modal-title">✈️ Log Sighting</h2>
+    <div class="form-group">
+      <label class="form-label">Registration</label>
+      <input type="text" class="form-input" id="m-reg" placeholder="e.g. A6-EVS"
+             list="reg-datalist" oninput="this.value = this.value.toUpperCase()">
+      <datalist id="reg-datalist"></datalist>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Card Count</label>
+      <input type="number" class="form-input" id="m-count" value="1" min="0" max="999">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Special Livery / Note (optional)</label>
+      <input type="text" class="form-input" id="m-special" placeholder="e.g. GLOW, 50th Anniversary…">
+    </div>
+    <div class="form-group">
+      <label class="checkbox-label">
+        <input type="checkbox" id="m-lowconf">
+        Low confidence (unsure of registration)
+      </label>
+    </div>
+    <div class="modal-actions-row">
+      <button class="btn btn-danger" id="modal-delete-btn" onclick="deleteSighting()" style="display:none">Delete</button>
+      <div class="btn-row" style="margin-top:0; flex:1; justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveSighting()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  FLEET DATABASE
+// ============================================================
+const AIRLINES_META = {
+  "Emirates":          { color: "#C8102E", flag: "🇦🇪" },
+  "British Airways":   { color: "#075AAA", flag: "🇬🇧" },
+  "Singapore Airlines":{ color: "#2B4EA8", flag: "🇸🇬" },
+  "Lufthansa":         { color: "#FFCE00", textColor: "#05164D", flag: "🇩🇪" },
+  "Qantas":            { color: "#E8112D", flag: "🇦🇺" },
+  "Etihad":            { color: "#C4A050", textColor: "#2d1f0a", flag: "🇦🇪" },
+  "Air France":        { color: "#0032A0", flag: "🇫🇷" },
+  "Korean Air":        { color: "#00205B", flag: "🇰🇷" },
+  "China Southern":    { color: "#E60012", flag: "🇨🇳" },
+  "Malaysia Airlines": { color: "#CC0001", flag: "🇲🇾" },
+  "Asiana Airlines":   { color: "#005792", flag: "🇰🇷" },
+  "Thai Airways":      { color: "#6F1A84", flag: "🇹🇭" },
+};
+
+// Complete known A380 fleet. This is a best-effort list — some retired
+// aircraft may be included and a few active ones may be missing.
+const FULL_FLEET = {
+  "Emirates": [
+    "A6-EDA","A6-EDB","A6-EDC","A6-EDD","A6-EDE","A6-EDF","A6-EDG","A6-EDH",
+    "A6-EDI","A6-EDJ","A6-EDK","A6-EDL","A6-EDM","A6-EDN","A6-EDO","A6-EDP",
+    "A6-EDQ","A6-EDR","A6-EDS","A6-EDT","A6-EDU","A6-EDV","A6-EDW","A6-EDX",
+    "A6-EDY","A6-EDZ",
+    "A6-EEA","A6-EEB","A6-EEC","A6-EED","A6-EEE","A6-EEF","A6-EEG","A6-EEH",
+    "A6-EEI","A6-EEJ","A6-EEK","A6-EEL","A6-EEM","A6-EEN","A6-EEO","A6-EEP",
+    "A6-EEQ","A6-EER","A6-EES","A6-EET","A6-EEU","A6-EEV","A6-EEW","A6-EEX",
+    "A6-EEY","A6-EEZ",
+    "A6-EOA","A6-EOB","A6-EOC","A6-EOD","A6-EOE","A6-EOF","A6-EOG","A6-EOH",
+    "A6-EOI","A6-EOJ","A6-EOK","A6-EOL","A6-EOM","A6-EON","A6-EOO","A6-EOP",
+    "A6-EOQ","A6-EOR","A6-EOS","A6-EOT","A6-EOU",
+    "A6-EUA","A6-EUB","A6-EUC","A6-EUD","A6-EUE","A6-EUF","A6-EUG","A6-EUH",
+    "A6-EUI","A6-EUJ","A6-EUK","A6-EUL","A6-EUM","A6-EUN","A6-EUO","A6-EUP",
+    "A6-EUQ","A6-EUR","A6-EUS","A6-EUT","A6-EUU","A6-EUV","A6-EUW","A6-EUX",
+    "A6-EUY","A6-EUZ",
+    "A6-EVA","A6-EVB","A6-EVC","A6-EVD","A6-EVE","A6-EVF","A6-EVG","A6-EVH",
+    "A6-EVI","A6-EVJ","A6-EVK","A6-EVL","A6-EVM","A6-EVN","A6-EVO","A6-EVP",
+    "A6-EVQ","A6-EVR","A6-EVS"
+  ],
+  "British Airways": [
+    "G-XLEA","G-XLEB","G-XLEC","G-XLED","G-XLEE",
+    "G-XLEF","G-XLEG","G-XLEH","G-XLEI","G-XLEK","G-XLEL","G-XLEM"
+  ],
+  "Singapore Airlines": [
+    "9V-SKA","9V-SKB","9V-SKC","9V-SKD","9V-SKE","9V-SKF","9V-SKG","9V-SKH",
+    "9V-SKI","9V-SKJ","9V-SKK","9V-SKL","9V-SKM","9V-SKN","9V-SKO","9V-SKP",
+    "9V-SKQ","9V-SKR","9V-SKS","9V-SKT","9V-SKU","9V-SKV","9V-SKW","9V-SKX",
+    "9V-SKY","9V-SKZ"
+  ],
+  "Lufthansa": [
+    "D-AIMA","D-AIMB","D-AIMC","D-AIMD","D-AIME","D-AIMF","D-AIMG","D-AIMH",
+    "D-AIMI","D-AIMJ","D-AIMK","D-AIML","D-AIMM","D-AIMN"
+  ],
+  "Qantas": [
+    "VH-OQA","VH-OQB","VH-OQC","VH-OQD","VH-OQE","VH-OQF",
+    "VH-OQG","VH-OQH","VH-OQI","VH-OQJ","VH-OQK","VH-OQL"
+  ],
+  "Etihad": [
+    "A6-APA","A6-APB","A6-APC","A6-APD","A6-APE","A6-APF",
+    "A6-APG","A6-APH","A6-API","A6-APJ","A6-APK","A6-APL","A6-APM","A6-APN","A6-APO"
+  ],
+  "Air France": [
+    "F-HPJA","F-HPJB","F-HPJC","F-HPJD","F-HPJE",
+    "F-HPJF","F-HPJG","F-HPJH","F-HPJI","F-HPJJ"
+  ],
+  "Korean Air": [
+    "HL7611","HL7612","HL7613","HL7614","HL7615",
+    "HL7616","HL7617","HL7618","HL7619","HL7620"
+  ],
+  "China Southern": [
+    "B-6136","B-6137","B-6138","B-6139","B-6140"
+  ],
+  "Malaysia Airlines": [
+    "9M-MNA","9M-MNB","9M-MNC","9M-MND","9M-MNE","9M-MNF"
+  ],
+  "Asiana Airlines": [
+    "HL7625","HL7626","HL7640","HL7641","HL7642","HL7643"
+  ],
+  "Thai Airways": [
+    "HS-TUA","HS-TUB","HS-TUC","HS-TUD","HS-TUE","HS-TUF"
+  ]
+};
+
+// Build reg→airline lookup
+const REG_AIRLINE = {};
+for (const [airline, regs] of Object.entries(FULL_FLEET)) {
+  for (const r of regs) REG_AIRLINE[r] = airline;
+}
+
+function getAirline(reg) {
+  if (REG_AIRLINE[reg]) return REG_AIRLINE[reg];
+  if (/^A6-E[DEOEUV]/.test(reg)) return 'Emirates';
+  if (/^A6-AP/.test(reg)) return 'Etihad';
+  if (/^G-XLE/.test(reg)) return 'British Airways';
+  if (/^9V-SK/.test(reg)) return 'Singapore Airlines';
+  if (/^D-AIM/.test(reg)) return 'Lufthansa';
+  if (/^VH-OQ/.test(reg)) return 'Qantas';
+  if (/^F-HPJ/.test(reg)) return 'Air France';
+  if (/^HL76[12]/.test(reg)) return 'Korean Air';
+  if (/^HL76[4]/.test(reg)) return 'Asiana Airlines';
+  if (/^B-6/.test(reg)) return 'China Southern';
+  if (/^9M-MN/.test(reg)) return 'Malaysia Airlines';
+  if (/^HS-TU/.test(reg)) return 'Thai Airways';
+  return 'Unknown';
+}
+
+const ALL_REGS = Object.values(FULL_FLEET).flat();
+
+// ============================================================
+//  INITIAL DATA — from your Skycards screenshot transcription
+// ============================================================
+const INITIAL_DATA = [
+  {"registration":"A6-EVS","count":2},
+  {"registration":"A6-EDF","count":3},
+  {"registration":"A6-EDO","count":1},
+  {"registration":"A6-EUK","count":4},
+  {"registration":"A6-APE","count":3},
+  {"registration":"A6-EEF","count":1},
+  {"registration":"A6-APC","count":1},
+  {"registration":"A6-EVH","count":2},
+  {"registration":"A6-EEL","count":3},
+  {"registration":"G-XLEC","count":7},
+  {"registration":"A6-EEH","count":1},
+  {"registration":"A6-EOH","count":1},
+  {"registration":"A6-EOC","count":2},
+  {"registration":"A6-EUO","count":2},
+  {"registration":"A6-EED","count":2},
+  {"registration":"A6-EVF","count":2},
+  {"registration":"A6-EOE","count":2},
+  {"registration":"A6-EEI","count":3},
+  {"registration":"A6-EDY","count":2},
+  {"registration":"A6-EDZ","count":3},
+  {"registration":"A6-EUU","count":5},
+  {"registration":"A6-EOB","count":2},
+  {"registration":"A6-EDX","count":3},
+  {"registration":"A6-EOA","count":2},
+  {"registration":"A6-EUG","count":1},
+  {"registration":"A6-EOF","count":1},
+  {"registration":"A6-EDU","count":2},
+  {"registration":"A6-EEX","count":4},
+  {"registration":"G-XLEL","count":4},
+  {"registration":"G-XLEB","count":3},
+  {"registration":"A6-EUD","count":3},
+  {"registration":"A6-EUT","count":5},
+  {"registration":"A6-EVC","count":2},
+  {"registration":"9V-SKU","count":1},
+  {"registration":"A6-EOR","count":1},
+  {"registration":"A6-EDV","count":2},
+  {"registration":"A6-EVQ","count":1},
+  {"registration":"A6-EEA","count":2},
+  {"registration":"9V-SKY","count":2},
+  {"registration":"9V-SKW","count":1},
+  {"registration":"A6-EOT","count":3},
+  {"registration":"9V-SKT","count":3,"special":"GLOW"},
+  {"registration":"A6-EUQ","count":2},
+  {"registration":"G-XLEK","count":3},
+  {"registration":"G-XLEM","count":3},
+  {"registration":"A6-EVE","count":2},
+  {"registration":"A6-EOI","count":2},
+  {"registration":"A6-EEY","count":3},
+  {"registration":"A6-EUF","count":3},
+  {"registration":"A6-APF","count":1},
+  {"registration":"G-XLEE","count":5,"low_confidence":true},
+  {"registration":"A6-EVN","count":1},
+  {"registration":"A6-EOD","count":1},
+  {"registration":"A6-EEC","count":3},
+  {"registration":"A6-EOO","count":4},
+  {"registration":"A6-EUV","count":2},
+  {"registration":"A6-EEB","count":2},
+  {"registration":"9V-SKQ","count":2},
+  {"registration":"A6-EUX","count":5},
+  {"registration":"G-XLEG","count":3},
+  {"registration":"9V-SKN","count":1},
+  {"registration":"G-XLED","count":3},
+  {"registration":"A6-API","count":1},
+  {"registration":"D-AIMM","count":3},
+  {"registration":"A6-EUR","count":1},
+  {"registration":"A6-EEG","count":1,"low_confidence":true},
+  {"registration":"D-AIMA","count":3},
+  {"registration":"A6-EDJ","count":2,"low_confidence":true},
+  {"registration":"A6-EOG","count":2},
+  {"registration":"A6-EOU","count":1},
+  {"registration":"A6-EUN","count":3,"low_confidence":true},
+  {"registration":"A6-EUC","count":2},
+  {"registration":"A6-EVL","count":2},
+  {"registration":"A6-APN","count":2},
+  {"registration":"A6-EUJ","count":1},
+  {"registration":"A6-EVG","count":4},
+  {"registration":"A6-EUI","count":1,"low_confidence":true},
+  {"registration":"A6-EEZ","count":2},
+  {"registration":"A6-EEJ","count":2},
+  {"registration":"A6-EVJ","count":1},
+  {"registration":"A6-EUS","count":1},
+  {"registration":"A6-EEW","count":3},
+  {"registration":"A6-EOJ","count":1},
+  {"registration":"A6-EVM","count":1},
+  {"registration":"A6-EEU","count":1,"low_confidence":true},
+  {"registration":"A6-EOL","count":1},
+  {"registration":"A6-EVR","count":1},
+  {"registration":"A6-EEP","count":1},
+  {"registration":"A6-EDK","count":1},
+  {"registration":"G-XLEA","count":2},
+  {"registration":"9V-SKV","count":1},
+  {"registration":"VH-OQJ","count":1},
+  {"registration":"D-AIMC","count":3},
+  {"registration":"D-AIMB","count":3},
+  {"registration":"A6-EUZ","count":2},
+  {"registration":"VH-OQA","count":3},
+  {"registration":"D-AIMH","count":2,"special":"GLOW"},
+  {"registration":"D-AIMK","count":1},
+  {"registration":"A6-APO","count":1},
+  {"registration":"VH-OQL","count":1},
+  {"registration":"9V-SKZ","count":1},
+  {"registration":"VH-OQD","count":1},
+  {"registration":"A6-EEO","count":1},
+  {"registration":"VH-OQK","count":1},
+  {"registration":"A6-EEM","count":1},
+  {"registration":"A6-EEE","count":2},
+  {"registration":"A6-EDQ","count":1},
+  {"registration":"A6-EVO","count":1}
+];
+
+// ============================================================
+//  STORAGE
+// ============================================================
+const STORE_KEY = 'skycards_a380_v1';
+
+function loadStore() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  // First run — seed from initial data
+  const sightings = {};
+  for (const item of INITIAL_DATA) {
+    // Deduplicate: if reg already exists keep higher count
+    if (sightings[item.registration]) {
+      if (item.count > sightings[item.registration].count) {
+        sightings[item.registration].count = item.count;
+      }
+      if (!item.low_confidence) delete sightings[item.registration].low_confidence;
+      if (item.special) sightings[item.registration].special = item.special;
+    } else {
+      sightings[item.registration] = {
+        count: item.count,
+        special: item.special || null,
+        low_confidence: item.low_confidence || false,
+        addedAt: new Date().toISOString()
+      };
+    }
+  }
+  const store = { sightings, version: 1, createdAt: new Date().toISOString() };
+  saveStore(store);
+  return store;
+}
+
+function saveStore(store) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(store));
+}
+
+let store = loadStore();
+
+function getSightings() { return store.sightings; }
+
+// ============================================================
+//  STATS
+// ============================================================
+function computeStats() {
+  const s = getSightings();
+  const caught = Object.keys(s).length;
+  const totalFleet = ALL_REGS.length;
+  const totalCards = Object.values(s).reduce((a, v) => a + v.count, 0);
+  const glowCount = Object.values(s).filter(v => v.special).length;
+  const lowConfCount = Object.values(s).filter(v => v.low_confidence).length;
+  return { caught, totalFleet, totalCards, glowCount, lowConfCount };
+}
+
+function updateHeaderChip() {
+  const { caught, totalFleet } = computeStats();
+  document.getElementById('header-chip').textContent = `${caught} / ${totalFleet} caught`;
+}
+
+// ============================================================
+//  OVERVIEW
+// ============================================================
+function renderOverview() {
+  const s = getSightings();
+  const { caught, totalFleet, totalCards, glowCount, lowConfCount } = computeStats();
+  const pct = totalFleet ? Math.round(caught / totalFleet * 100) : 0;
+
+  document.getElementById('hero-stats').innerHTML = `
+    <div class="hero-stat">
+      <div class="hero-stat-value">${caught}</div>
+      <div class="hero-stat-label">Unique A380s</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value" style="color:var(--danger)">${totalFleet - caught}</div>
+      <div class="hero-stat-label">Still Missing</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value" style="color:var(--success)">${totalCards}</div>
+      <div class="hero-stat-label">Total Cards</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-value" style="color:var(--glow-color)">${glowCount}</div>
+      <div class="hero-stat-label">Special Liveries</div>
+    </div>
+    ${lowConfCount ? `<div class="hero-stat">
+      <div class="hero-stat-value" style="color:var(--warn)">${lowConfCount}</div>
+      <div class="hero-stat-label">Low Confidence</div>
+    </div>` : ''}
+  `;
+
+  document.getElementById('overall-pct').textContent = pct + '%';
+  document.getElementById('overall-fill').style.width = pct + '%';
+  document.getElementById('overall-sub-left').textContent = `${caught} of ${totalFleet} caught`;
+  document.getElementById('overall-sub-right').textContent = `${totalFleet - caught} remaining`;
+
+  document.getElementById('airline-grid').innerHTML = Object.entries(FULL_FLEET).map(([airline, regs]) => {
+    const meta = AIRLINES_META[airline] || { color: '#666', flag: '✈️' };
+    const airlineCaught = regs.filter(r => s[r]).length;
+    const airlinePct = Math.round(airlineCaught / regs.length * 100);
+    const textColor = meta.textColor || 'white';
+    return `
+      <div class="airline-card" onclick="filterCollection('${airline}')">
+        <div class="airline-card-header">
+          <span class="airline-flag">${meta.flag}</span>
+          <span class="airline-name">${airline}</span>
+          <span class="airline-score" style="color:${meta.color}">${airlineCaught}/${regs.length}</span>
+        </div>
+        <div class="small-progress-track">
+          <div class="small-progress-fill" style="width:${airlinePct}%;background:${meta.color}"></div>
+        </div>
+        <div class="airline-card-footer">
+          <span>${airlinePct}% complete</span>
+          <span>${regs.length - airlineCaught} missing</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+//  COLLECTION
+// ============================================================
+function populateAirlineDropdowns() {
+  const opts = '<option value="">All Airlines</option>' +
+    Object.entries(AIRLINES_META).map(([name, m]) =>
+      `<option value="${name}">${m.flag} ${name}</option>`
+    ).join('');
+  document.getElementById('col-airline').innerHTML = opts;
+  document.getElementById('miss-airline').innerHTML = opts;
+}
+
+function filterCollection(airline) {
+  switchTab('collection');
+  document.getElementById('col-airline').value = airline;
+  renderCollection();
+}
+
+function renderCollection() {
+  const s = getSightings();
+  const search = document.getElementById('col-search').value.trim().toUpperCase();
+  const airlineFilter = document.getElementById('col-airline').value;
+  const sortMode = document.getElementById('col-sort').value;
+
+  let entries = Object.entries(s).map(([reg, data]) => ({ reg, ...data, airline: getAirline(reg) }));
+
+  if (search) entries = entries.filter(e => e.reg.includes(search));
+  if (airlineFilter) entries = entries.filter(e => e.airline === airlineFilter);
+
+  if (sortMode === 'count-desc') entries.sort((a, b) => b.count - a.count || a.reg.localeCompare(b.reg));
+  else if (sortMode === 'count-asc') entries.sort((a, b) => a.count - b.count || a.reg.localeCompare(b.reg));
+  else if (sortMode === 'airline') entries.sort((a, b) => a.airline.localeCompare(b.airline) || a.reg.localeCompare(b.reg));
+  else entries.sort((a, b) => a.reg.localeCompare(b.reg));
+
+  document.getElementById('col-count').textContent = `${entries.length} aircraft`;
+
+  if (!entries.length) {
+    document.getElementById('collection-grid').innerHTML = '<div class="empty">No aircraft match your filters.</div>';
+    return;
+  }
+
+  document.getElementById('collection-grid').innerHTML = entries.map(e => {
+    const meta = AIRLINES_META[e.airline] || { color: '#666' };
+    const isGlow = !!e.special;
+    return `
+      <div class="aircraft-card${isGlow ? ' glow-card' : ''}" onclick="openEditModal('${e.reg}')"
+           style="--stripe:${meta.color}">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${meta.color};border-radius:10px 10px 0 0"></div>
+        <div class="aircraft-reg">${e.reg}</div>
+        <div class="aircraft-airline-label">${meta.flag || ''} ${e.airline}</div>
+        <div class="aircraft-badges">
+          <span class="badge badge-count">×${e.count}</span>
+          ${isGlow ? `<span class="badge badge-glow">✨ ${e.special}</span>` : ''}
+          ${e.low_confidence ? '<span class="badge badge-lowconf">? unverified</span>' : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ============================================================
+//  MISSING
+// ============================================================
+function renderMissing() {
+  const s = getSightings();
+  const airlineFilter = document.getElementById('miss-airline').value;
+  let html = '';
+  let anyMissing = false;
+
+  for (const [airline, regs] of Object.entries(FULL_FLEET)) {
+    if (airlineFilter && airline !== airlineFilter) continue;
+    const missing = regs.filter(r => !s[r]);
+    const meta = AIRLINES_META[airline] || { color: '#666', flag: '✈️' };
+
+    if (!missing.length) {
+      if (!airlineFilter || airline === airlineFilter) {
+        html += `
+          <div class="airline-section">
+            <div class="airline-section-header">
+              <span class="airline-flag">${meta.flag}</span>
+              <span class="airline-name">${airline}</span>
+              <span class="complete-tag">✓ Complete!</span>
+            </div>
+          </div>`;
+      }
+      continue;
+    }
+
+    anyMissing = true;
+    html += `
+      <div class="airline-section">
+        <div class="airline-section-header">
+          <span class="airline-flag">${meta.flag}</span>
+          <span class="airline-name">${airline}</span>
+          <span class="missing-tag">${missing.length} missing</span>
+        </div>
+        <div class="aircraft-grid">
+          ${missing.map(reg => `
+            <div class="aircraft-card uncaught" onclick="openAddModal('${reg}')">
+              <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${meta.color};border-radius:10px 10px 0 0;opacity:0.5"></div>
+              <div class="aircraft-reg">${reg}</div>
+              <div class="aircraft-airline-label">${meta.flag} ${airline}</div>
+              <div style="margin-top:0.5rem;font-size:0.67rem;color:var(--text-muted)">tap to add</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  if (!html) html = '<div class="empty">🎉 No missing aircraft for selected filter!</div>';
+  document.getElementById('missing-content').innerHTML = html;
+}
+
+// ============================================================
+//  MODAL
+// ============================================================
+let editingReg = null;
+
+function openAddModal(prefillReg) {
+  editingReg = null;
+  document.getElementById('modal-title').textContent = '✈️ Log Sighting';
+  document.getElementById('m-reg').value = prefillReg || '';
+  document.getElementById('m-reg').readOnly = false;
+  document.getElementById('m-count').value = 1;
+  document.getElementById('m-special').value = '';
+  document.getElementById('m-lowconf').checked = false;
+  document.getElementById('modal-delete-btn').style.display = 'none';
+
+  // Populate datalist with all known regs
+  document.getElementById('reg-datalist').innerHTML =
+    ALL_REGS.map(r => `<option value="${r}">`).join('');
+
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('m-reg').focus(), 50);
+}
+
+function openEditModal(reg) {
+  const s = getSightings();
+  const data = s[reg] || {};
+  editingReg = reg;
+
+  document.getElementById('modal-title').textContent = `✏️ Edit — ${reg}`;
+  document.getElementById('m-reg').value = reg;
+  document.getElementById('m-reg').readOnly = true;
+  document.getElementById('m-count').value = data.count ?? 1;
+  document.getElementById('m-special').value = data.special || '';
+  document.getElementById('m-lowconf').checked = !!data.low_confidence;
+  document.getElementById('modal-delete-btn').style.display = 'inline-block';
+
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('m-count').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('m-reg').readOnly = false;
+  editingReg = null;
+}
+
+function onModalOverlayClick(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+function saveSighting() {
+  const reg = document.getElementById('m-reg').value.trim().toUpperCase();
+  const count = parseInt(document.getElementById('m-count').value) || 0;
+  const special = document.getElementById('m-special').value.trim() || null;
+  const lowConf = document.getElementById('m-lowconf').checked;
+
+  if (!reg) { showToast('⚠️ Registration required'); return; }
+  if (count < 0) { showToast('⚠️ Count cannot be negative'); return; }
+
+  const s = getSightings();
+  const isNew = !s[reg];
+  s[reg] = {
+    count,
+    special,
+    low_confidence: lowConf,
+    addedAt: s[reg]?.addedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  store.sightings = s;
+  saveStore(store);
+
+  closeModal();
+  updateHeaderChip();
+  refreshCurrentView();
+  showToast(isNew ? `✅ Added ${reg}` : `✅ Updated ${reg}`);
+}
+
+function deleteSighting() {
+  if (!editingReg) return;
+  if (!confirm(`Remove ${editingReg} from your collection?`)) return;
+  const s = getSightings();
+  delete s[editingReg];
+  store.sightings = s;
+  saveStore(store);
+  closeModal();
+  updateHeaderChip();
+  refreshCurrentView();
+  showToast(`🗑️ Removed ${editingReg}`);
+}
+
+// ============================================================
+//  TABS
+// ============================================================
+let currentTab = 'overview';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  refreshCurrentView();
+}
+
+function refreshCurrentView() {
+  if (currentTab === 'overview') renderOverview();
+  else if (currentTab === 'collection') renderCollection();
+  else if (currentTab === 'missing') renderMissing();
+}
+
+// ============================================================
+//  EXPORT / IMPORT
+// ============================================================
+function exportData() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    type: "A380",
+    caught: Object.keys(getSightings()).length,
+    total: ALL_REGS.length,
+    aircraft: Object.entries(getSightings()).map(([registration, data]) => ({
+      registration,
+      count: data.count,
+      ...(data.special ? { special: data.special } : {}),
+      ...(data.low_confidence ? { low_confidence: true } : {})
+    }))
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `a380-collection-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📁 Export downloaded');
+}
+
+function triggerImport() {
+  document.getElementById('import-file').click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.aircraft || !Array.isArray(data.aircraft)) throw new Error('Invalid format');
+      if (!confirm(`Import ${data.aircraft.length} aircraft? This will REPLACE your current collection.`)) return;
+
+      const sightings = {};
+      for (const item of data.aircraft) {
+        sightings[item.registration] = {
+          count: item.count || 1,
+          special: item.special || null,
+          low_confidence: item.low_confidence || false,
+          addedAt: new Date().toISOString()
+        };
+      }
+      store.sightings = sightings;
+      saveStore(store);
+      updateHeaderChip();
+      refreshCurrentView();
+      showToast(`✅ Imported ${data.aircraft.length} aircraft`);
+    } catch(err) {
+      showToast('❌ Invalid JSON file');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+//  TOAST
+// ============================================================
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+populateAirlineDropdowns();
+updateHeaderChip();
+renderOverview();
+</script>
+</body>
+</html>
