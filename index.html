@@ -697,16 +697,15 @@ const AIRLINES_META = {
   "Lufthansa":         { color: "#FFCE00", textColor: "#05164D", flag: "🇩🇪" },
   "Qantas":            { color: "#E8112D", flag: "🇦🇺" },
   "Etihad":            { color: "#C4A050", textColor: "#2d1f0a", flag: "🇦🇪" },
-  "Air France":        { color: "#0032A0", flag: "🇫🇷" },
+  "Qatar Airways":     { color: "#5C0632", flag: "🇶🇦" },
   "Korean Air":        { color: "#00205B", flag: "🇰🇷" },
-  "China Southern":    { color: "#E60012", flag: "🇨🇳" },
-  "Malaysia Airlines": { color: "#CC0001", flag: "🇲🇾" },
   "Asiana Airlines":   { color: "#005792", flag: "🇰🇷" },
-  "Thai Airways":      { color: "#6F1A84", flag: "🇹🇭" },
+  "ANA":               { color: "#13448F", flag: "🇯🇵" },
 };
 
-// Complete known A380 fleet. This is a best-effort list — some retired
-// aircraft may be included and a few active ones may be missing.
+// Complete known A380 fleet based on FR24/Skycards data.
+// Air France, Malaysia Airlines, Thai Airways and China Southern retired
+// their A380s and are not tracked by Skycards.
 const FULL_FLEET = {
   "Emirates": [
     "A6-EDA","A6-EDB","A6-EDC","A6-EDD","A6-EDE","A6-EDF","A6-EDG","A6-EDH",
@@ -733,10 +732,8 @@ const FULL_FLEET = {
     "G-XLEF","G-XLEG","G-XLEH","G-XLEI","G-XLEK","G-XLEL","G-XLEM"
   ],
   "Singapore Airlines": [
-    "9V-SKA","9V-SKB","9V-SKC","9V-SKD","9V-SKE","9V-SKF","9V-SKG","9V-SKH",
-    "9V-SKI","9V-SKJ","9V-SKK","9V-SKL","9V-SKM","9V-SKN","9V-SKO","9V-SKP",
-    "9V-SKQ","9V-SKR","9V-SKS","9V-SKT","9V-SKU","9V-SKV","9V-SKW","9V-SKX",
-    "9V-SKY","9V-SKZ"
+    "9V-SKN","9V-SKO","9V-SKP","9V-SKQ","9V-SKR",
+    "9V-SKS","9V-SKT","9V-SKU","9V-SKV","9V-SKW","9V-SKY","9V-SKZ"
   ],
   "Lufthansa": [
     "D-AIMA","D-AIMB","D-AIMC","D-AIMD","D-AIME","D-AIMF","D-AIMG","D-AIMH",
@@ -750,25 +747,18 @@ const FULL_FLEET = {
     "A6-APA","A6-APB","A6-APC","A6-APD","A6-APE","A6-APF",
     "A6-APG","A6-APH","A6-API","A6-APJ","A6-APK","A6-APL","A6-APM","A6-APN","A6-APO"
   ],
-  "Air France": [
-    "F-HPJA","F-HPJB","F-HPJC","F-HPJD","F-HPJE",
-    "F-HPJF","F-HPJG","F-HPJH","F-HPJI","F-HPJJ"
+  "Qatar Airways": [
+    "A7-APC","A7-APD","A7-APE","A7-APF","A7-APG","A7-APH","A7-API","A7-APJ"
   ],
   "Korean Air": [
     "HL7611","HL7612","HL7613","HL7614","HL7615",
-    "HL7616","HL7617","HL7618","HL7619","HL7620"
-  ],
-  "China Southern": [
-    "B-6136","B-6137","B-6138","B-6139","B-6140"
-  ],
-  "Malaysia Airlines": [
-    "9M-MNA","9M-MNB","9M-MNC","9M-MND","9M-MNE","9M-MNF"
+    "HL7619","HL7621","HL7622","HL7627","HL7628"
   ],
   "Asiana Airlines": [
-    "HL7625","HL7626","HL7640","HL7641","HL7642","HL7643"
+    "HL7625","HL7626","HL7634","HL7635","HL7640","HL7641"
   ],
-  "Thai Airways": [
-    "HS-TUA","HS-TUB","HS-TUC","HS-TUD","HS-TUE","HS-TUF"
+  "ANA": [
+    "JA381A","JA382A","JA383A"
   ]
 };
 
@@ -782,16 +772,14 @@ function getAirline(reg) {
   if (REG_AIRLINE[reg]) return REG_AIRLINE[reg];
   if (/^A6-E[DEOEUV]/.test(reg)) return 'Emirates';
   if (/^A6-AP/.test(reg)) return 'Etihad';
+  if (/^A7-AP/.test(reg)) return 'Qatar Airways';
   if (/^G-XLE/.test(reg)) return 'British Airways';
   if (/^9V-SK/.test(reg)) return 'Singapore Airlines';
   if (/^D-AIM/.test(reg)) return 'Lufthansa';
   if (/^VH-OQ/.test(reg)) return 'Qantas';
-  if (/^F-HPJ/.test(reg)) return 'Air France';
-  if (/^HL76[12]/.test(reg)) return 'Korean Air';
-  if (/^HL76[4]/.test(reg)) return 'Asiana Airlines';
-  if (/^B-6/.test(reg)) return 'China Southern';
-  if (/^9M-MN/.test(reg)) return 'Malaysia Airlines';
-  if (/^HS-TU/.test(reg)) return 'Thai Airways';
+  if (/^JA38/.test(reg)) return 'ANA';
+  if (/^HL76(1[1-5]|19|2[178])/.test(reg)) return 'Korean Air';
+  if (/^HL76(2[56]|3[45]|4[01])/.test(reg)) return 'Asiana Airlines';
   return 'Unknown';
 }
 
