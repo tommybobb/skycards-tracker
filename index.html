@@ -763,6 +763,9 @@ const AIRLINES_META = {
   "Korean Air":        { color: "#00205B", flag: "🇰🇷" },
   "Asiana Airlines":   { color: "#005792", flag: "🇰🇷" },
   "ANA":               { color: "#13448F", flag: "🇯🇵" },
+  "Global Airlines":   { color: "#7B2FBE", flag: "🇬🇧" },
+  "China Southern":    { color: "#009FE3", flag: "🇨🇳" },
+  "Other":             { color: "#607D8B", flag: "✈️" },
 };
 
 // Complete known A380 fleet based on FR24/Skycards data.
@@ -770,17 +773,16 @@ const AIRLINES_META = {
 // their A380s and are not tracked by Skycards.
 const FULL_FLEET = {
   "Emirates": [
-    "A6-EDA","A6-EDB","A6-EDC","A6-EDD","A6-EDE","A6-EDF","A6-EDG","A6-EDH",
-    "A6-EDI","A6-EDJ","A6-EDK","A6-EDL","A6-EDM","A6-EDN","A6-EDO","A6-EDP",
-    "A6-EDQ","A6-EDR","A6-EDS","A6-EDT","A6-EDU","A6-EDV","A6-EDW","A6-EDX",
-    "A6-EDY","A6-EDZ",
+    "A6-EDF","A6-EDK","A6-EDL","A6-EDM","A6-EDN","A6-EDO","A6-EDP","A6-EDQ",
+    "A6-EDR","A6-EDS","A6-EDT","A6-EDU","A6-EDV","A6-EDW","A6-EDX","A6-EDY","A6-EDZ",
     "A6-EEA","A6-EEB","A6-EEC","A6-EED","A6-EEE","A6-EEF","A6-EEG","A6-EEH",
     "A6-EEI","A6-EEJ","A6-EEK","A6-EEL","A6-EEM","A6-EEN","A6-EEO","A6-EEP",
     "A6-EEQ","A6-EER","A6-EES","A6-EET","A6-EEU","A6-EEV","A6-EEW","A6-EEX",
     "A6-EEY","A6-EEZ",
     "A6-EOA","A6-EOB","A6-EOC","A6-EOD","A6-EOE","A6-EOF","A6-EOG","A6-EOH",
     "A6-EOI","A6-EOJ","A6-EOK","A6-EOL","A6-EOM","A6-EON","A6-EOO","A6-EOP",
-    "A6-EOQ","A6-EOR","A6-EOS","A6-EOT","A6-EOU",
+    "A6-EOQ","A6-EOR","A6-EOS","A6-EOT","A6-EOU","A6-EOV","A6-EOW","A6-EOX",
+    "A6-EOY","A6-EOZ",
     "A6-EUA","A6-EUB","A6-EUC","A6-EUD","A6-EUE","A6-EUF","A6-EUG","A6-EUH",
     "A6-EUI","A6-EUJ","A6-EUK","A6-EUL","A6-EUM","A6-EUN","A6-EUO","A6-EUP",
     "A6-EUQ","A6-EUR","A6-EUS","A6-EUT","A6-EUU","A6-EUV","A6-EUW","A6-EUX",
@@ -791,29 +793,27 @@ const FULL_FLEET = {
   ],
   "British Airways": [
     "G-XLEA","G-XLEB","G-XLEC","G-XLED","G-XLEE",
-    "G-XLEF","G-XLEG","G-XLEH","G-XLEI","G-XLEK","G-XLEL","G-XLEM"
+    "G-XLEF","G-XLEG","G-XLEH","G-XLEI","G-XLEJ","G-XLEK","G-XLEL"
   ],
   "Singapore Airlines": [
-    "9V-SKN","9V-SKO","9V-SKP","9V-SKQ","9V-SKR",
+    "9V-SKM","9V-SKN","9V-SKP","9V-SKQ","9V-SKR",
     "9V-SKS","9V-SKT","9V-SKU","9V-SKV","9V-SKW","9V-SKY","9V-SKZ"
   ],
   "Lufthansa": [
-    "D-AIMA","D-AIMB","D-AIMC","D-AIMD","D-AIME","D-AIMF","D-AIMG","D-AIMH",
-    "D-AIMI","D-AIMJ","D-AIMK","D-AIML","D-AIMM","D-AIMN"
+    "D-AIMA","D-AIMB","D-AIMC","D-AIMH","D-AIMK","D-AIML","D-AIMM","D-AIMN"
   ],
   "Qantas": [
-    "VH-OQA","VH-OQB","VH-OQC","VH-OQD","VH-OQE","VH-OQF",
-    "VH-OQG","VH-OQH","VH-OQI","VH-OQJ","VH-OQK","VH-OQL"
+    "VH-OQA","VH-OQB","VH-OQC","VH-OQD","VH-OQG",
+    "VH-OQH","VH-OQI","VH-OQJ","VH-OQK","VH-OQL"
   ],
   "Etihad": [
-    "A6-APA","A6-APB","A6-APC","A6-APD","A6-APE","A6-APF",
-    "A6-APG","A6-APH","A6-API","A6-APJ","A6-APK","A6-APL","A6-APM","A6-APN","A6-APO"
+    "A6-APB","A6-APC","A6-APD","A6-APE","A6-APF",
+    "A6-APG","A6-APH","A6-API","A6-APJ"
   ],
   "Qatar Airways": [
     "A7-APC","A7-APD","A7-APE","A7-APF","A7-APG","A7-APH","A7-API","A7-APJ"
   ],
   "Korean Air": [
-    "HL7611","HL7612","HL7613","HL7614","HL7615",
     "HL7619","HL7621","HL7622","HL7627","HL7628"
   ],
   "Asiana Airlines": [
@@ -821,6 +821,15 @@ const FULL_FLEET = {
   ],
   "ANA": [
     "JA381A","JA382A","JA383A"
+  ],
+  "Global Airlines": [
+    "9H-GLOBL","9H-MIP"
+  ],
+  "China Southern": [
+    "B-6136"
+  ],
+  "Other": [
+    "2-JAYN","F-WWOW"
   ]
 };
 
@@ -832,7 +841,7 @@ for (const [airline, regs] of Object.entries(FULL_FLEET)) {
 
 function getAirline(reg) {
   if (REG_AIRLINE[reg]) return REG_AIRLINE[reg];
-  if (/^A6-E[DEOEUV]/.test(reg)) return 'Emirates';
+  if (/^A6-E[DEOUV]/.test(reg)) return 'Emirates';
   if (/^A6-AP/.test(reg)) return 'Etihad';
   if (/^A7-AP/.test(reg)) return 'Qatar Airways';
   if (/^G-XLE/.test(reg)) return 'British Airways';
@@ -840,8 +849,9 @@ function getAirline(reg) {
   if (/^D-AIM/.test(reg)) return 'Lufthansa';
   if (/^VH-OQ/.test(reg)) return 'Qantas';
   if (/^JA38/.test(reg)) return 'ANA';
-  if (/^HL76(1[1-5]|19|2[178])/.test(reg)) return 'Korean Air';
+  if (/^HL76(19|2[178])/.test(reg)) return 'Korean Air';
   if (/^HL76(2[56]|3[45]|4[01])/.test(reg)) return 'Asiana Airlines';
+  if (/^9H-/.test(reg)) return 'Global Airlines';
   return 'Unknown';
 }
 
