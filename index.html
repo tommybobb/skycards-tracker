@@ -788,18 +788,6 @@
 
       <div id="sync-status" style="display:none;margin-top:1rem;padding:0.85rem 1rem;border-radius:10px;font-size:0.85rem"></div>
 
-      <!-- MODEL SYNC DEBUG -->
-      <div style="margin-top:1.5rem">
-        <div class="section-title" style="margin-bottom:0.6rem">Fleet Count Debug</div>
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.25rem">
-          <div id="debug-current" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.7">
-            Tap the button to test the models API.
-          </div>
-          <button class="btn btn-secondary" id="debug-btn" onclick="debugModelSync()" style="width:100%">Test Model Sync Now</button>
-          <pre id="debug-output" style="display:none;margin-top:1rem;font-size:0.72rem;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:0.75rem;overflow-x:auto;white-space:pre-wrap;word-break:break-all;color:var(--text-muted);max-height:260px;overflow-y:auto"></pre>
-        </div>
-      </div>
-
       <div id="sync-result" style="display:none;margin-top:1rem">
         <!-- Profile stats -->
         <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1rem">
@@ -1034,68 +1022,6 @@ async function fetchModelSync() {
       refreshCurrentView();
     }
   } catch(e) { /* offline or CORS — keep cached value */ }
-}
-
-async function debugModelSync() {
-  const btn = document.getElementById('debug-btn');
-  const out = document.getElementById('debug-output');
-  const info = document.getElementById('debug-current');
-  btn.disabled = true;
-  btn.textContent = 'Fetching…';
-  out.style.display = 'none';
-
-  let cached = null;
-  try { cached = JSON.parse(localStorage.getItem(MODELS_KEY) || 'null'); } catch(e) {}
-  const updatedAt = cached?.updatedAt || 0;
-
-  info.innerHTML =
-    `<strong>Local fleet count (ALL_REGS):</strong> ${ALL_REGS.length}<br>` +
-    `<strong>Active fleet size (modelFleetSize):</strong> ${modelFleetSize ?? '(not set — using local)'}<br>` +
-    `<strong>Cached a380Count:</strong> ${cached?.a380Count ?? 'none'}<br>` +
-    `<strong>Last fetched:</strong> ${cached?.fetchedAt ? new Date(cached.fetchedAt).toLocaleString() : 'never'}<br>` +
-    `<strong>Sending updatedAt:</strong> ${updatedAt}`;
-
-  const url = `https://api.skycards.oldapes.com/models?updatedAt=${updatedAt}`;
-  try {
-    const res = await fetch(url, {
-      headers: { 'x-client-version': '2.1.3', 'User-Agent': 'okhttp/4.12.0' }
-    });
-    const text = await res.text();
-    let parsed = null;
-    try { parsed = JSON.parse(text); } catch(e) {}
-
-    const a380Rows = parsed?.rows?.filter(r => r.id === 'A388' || (typeof r.name === 'string' && r.name.includes('380'))) ?? [];
-    const summedCount = a380Rows.reduce((t, r) => t + (r.num || 0), 0);
-    const statusLine = `HTTP ${res.status} ${res.statusText}`;
-    const rowSummary = a380Rows.length
-      ? a380Rows.map(r => `  ${r.id} "${r.name}" num=${r.num}`).join('\n')
-      : '  (none)';
-    const a380Line = a380Rows.length
-      ? `✅ ${a380Rows.length} A380 row(s) — total num: ${summedCount}`
-      : (parsed?.rows ? `⚠️ No A380 rows in response (${parsed.rows.length} total rows)` : '⚠️ Could not parse rows');
-
-    out.textContent = `--- ${statusLine} ---\n${a380Line}\nMatching rows:\n${rowSummary}\n\nFull response:\n${parsed ? JSON.stringify(parsed, null, 2) : text}`;
-    out.style.display = 'block';
-    info.innerHTML += `<br><strong>Result:</strong> ${statusLine} — ${a380Line}`;
-
-    if (a380Rows.length) {
-      modelFleetSize = summedCount;
-      localStorage.setItem(MODELS_KEY, JSON.stringify({
-        updatedAt: parsed.updatedAt ?? updatedAt,
-        a380Count: summedCount,
-        fetchedAt: Date.now()
-      }));
-      updateHeaderChip();
-      refreshCurrentView();
-    }
-  } catch(err) {
-    out.textContent = `❌ Fetch failed: ${err.message}\n\nThis is likely a CORS error — the API does not allow direct browser requests from this origin.`;
-    out.style.display = 'block';
-    info.innerHTML += `<br><strong>Result:</strong> ❌ ${err.message}`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Test Model Sync Now';
-  }
 }
 
 function loadStore() {
@@ -1434,19 +1360,7 @@ function refreshCurrentView() {
   if (currentTab === 'overview') renderOverview();
   else if (currentTab === 'collection') renderCollection();
   else if (currentTab === 'missing') renderMissing();
-  else if (currentTab === 'sync') renderDebugInfo();
-}
-
-function renderDebugInfo() {
-  const info = document.getElementById('debug-current');
-  if (!info) return;
-  let cached = null;
-  try { cached = JSON.parse(localStorage.getItem(MODELS_KEY) || 'null'); } catch(e) {}
-  info.innerHTML =
-    `<strong>Local fleet count (ALL_REGS):</strong> ${ALL_REGS.length}<br>` +
-    `<strong>Active fleet size (modelFleetSize):</strong> ${modelFleetSize ?? '(not set — using local)'}<br>` +
-    `<strong>Cached a380Count:</strong> ${cached?.a380Count ?? 'none'}<br>` +
-    `<strong>Last fetched:</strong> ${cached?.fetchedAt ? new Date(cached.fetchedAt).toLocaleString() : 'never'}`;
+  // sync tab is stateless — no render needed
 }
 
 // ============================================================
