@@ -596,6 +596,7 @@
   <div class="nav-tab active" data-tab="overview" onclick="switchTab('overview')">Overview</div>
   <div class="nav-tab" data-tab="collection" onclick="switchTab('collection')">My Collection</div>
   <div class="nav-tab" data-tab="missing" onclick="switchTab('missing')">Missing</div>
+  <div class="nav-tab" data-tab="sync" onclick="switchTab('sync')">Sync</div>
 </nav>
 
 <main>
@@ -635,6 +636,54 @@
     </div>
     <div id="col-count" style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem"></div>
     <div class="aircraft-grid" id="collection-grid"></div>
+  </div>
+
+  <!-- SYNC -->
+  <div id="view-sync" class="view">
+    <div style="max-width:520px;margin:0 auto">
+      <div style="margin-bottom:1.25rem">
+        <div class="section-title">Sync from Skycards</div>
+        <p style="font-size:0.83rem;color:var(--text-muted);line-height:1.55">
+          Fetch your live collection directly from the Skycards API.
+          Your password is <strong style="color:var(--text)">never stored</strong> — it is used only for this request and then discarded.
+        </p>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem">
+        <div class="form-group">
+          <label class="form-label">Skycards Email</label>
+          <input type="email" class="form-input" id="sync-email" placeholder="you@example.com" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="checkbox-label" style="margin-bottom:0.5rem">
+            <input type="checkbox" id="sync-remember-email" onchange="onRememberEmailChange()">
+            <span style="font-size:0.82rem;color:var(--text-muted)">Remember email on this device</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="sync-password" placeholder="••••••••" autocomplete="current-password">
+          <p style="font-size:0.73rem;color:var(--text-muted);margin-top:0.3rem">Never stored — cleared immediately after the request.</p>
+        </div>
+        <div class="btn-row" style="margin-top:1.25rem;justify-content:flex-start">
+          <button class="btn btn-primary" id="sync-btn" onclick="syncFromSkycards()">Fetch from Skycards</button>
+          <button class="btn btn-secondary" id="sync-clear-btn" onclick="clearSyncCredentials()" style="display:none">Clear saved email</button>
+        </div>
+      </div>
+
+      <div id="sync-status" style="display:none;margin-top:1rem;padding:0.85rem 1rem;border-radius:10px;font-size:0.85rem"></div>
+
+      <div id="sync-result" style="display:none;margin-top:1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem">
+        <div class="section-title" style="margin-bottom:1rem">Fetched Data</div>
+        <div id="sync-result-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:0.65rem;margin-bottom:1.25rem"></div>
+        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem" id="sync-regs-label"></div>
+        <div id="sync-regs-grid" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1.25rem"></div>
+        <div class="btn-row" style="justify-content:flex-start">
+          <button class="btn btn-primary" onclick="importSyncData()">Import into Tracker</button>
+          <button class="btn btn-secondary" onclick="downloadSyncExport()">Download JSON</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MISSING -->
@@ -1236,6 +1285,7 @@ function refreshCurrentView() {
   if (currentTab === 'overview') renderOverview();
   else if (currentTab === 'collection') renderCollection();
   else if (currentTab === 'missing') renderMissing();
+  // sync tab is stateless — no render needed
 }
 
 // ============================================================
@@ -1313,11 +1363,201 @@ function showToast(msg) {
 }
 
 // ============================================================
+//  SYNC FROM SKYCARDS
+// ============================================================
+const SYNC_EMAIL_KEY = 'skycards_sync_email';
+let lastSyncPayload = null;
+
+function initSync() {
+  const saved = localStorage.getItem(SYNC_EMAIL_KEY);
+  if (saved) {
+    document.getElementById('sync-email').value = saved;
+    document.getElementById('sync-remember-email').checked = true;
+    document.getElementById('sync-clear-btn').style.display = 'inline-block';
+  }
+}
+
+function onRememberEmailChange() {
+  const checked = document.getElementById('sync-remember-email').checked;
+  const clearBtn = document.getElementById('sync-clear-btn');
+  if (!checked) {
+    localStorage.removeItem(SYNC_EMAIL_KEY);
+    clearBtn.style.display = 'none';
+  }
+}
+
+function clearSyncCredentials() {
+  localStorage.removeItem(SYNC_EMAIL_KEY);
+  document.getElementById('sync-email').value = '';
+  document.getElementById('sync-remember-email').checked = false;
+  document.getElementById('sync-clear-btn').style.display = 'none';
+  showToast('Saved email cleared');
+}
+
+function setSyncStatus(msg, type) {
+  const el = document.getElementById('sync-status');
+  el.style.display = 'block';
+  el.textContent = msg;
+  el.style.background = type === 'error' ? 'rgba(229,83,83,0.12)' :
+                        type === 'success' ? 'rgba(61,202,110,0.12)' :
+                        'rgba(74,143,255,0.1)';
+  el.style.border = type === 'error' ? '1px solid rgba(229,83,83,0.3)' :
+                    type === 'success' ? '1px solid rgba(61,202,110,0.3)' :
+                    '1px solid rgba(74,143,255,0.25)';
+  el.style.color = type === 'error' ? 'var(--danger)' :
+                   type === 'success' ? 'var(--success)' :
+                   'var(--accent)';
+}
+
+async function syncFromSkycards() {
+  const email = document.getElementById('sync-email').value.trim();
+  const passwordEl = document.getElementById('sync-password');
+  const password = passwordEl.value;
+  const remember = document.getElementById('sync-remember-email').checked;
+
+  if (!email) { setSyncStatus('Please enter your email.', 'error'); return; }
+  if (!password) { setSyncStatus('Please enter your password.', 'error'); return; }
+
+  if (remember) {
+    localStorage.setItem(SYNC_EMAIL_KEY, email);
+    document.getElementById('sync-clear-btn').style.display = 'inline-block';
+  }
+
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.textContent = 'Fetching…';
+  document.getElementById('sync-result').style.display = 'none';
+  setSyncStatus('Connecting to Skycards API…', 'info');
+
+  try {
+    const response = await fetch('https://api.skycards.oldapes.com/users/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-client-version': '2.1.3',
+        'User-Agent': 'okhttp/4.12.0'
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    // Clear password immediately regardless of outcome
+    passwordEl.value = '';
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      setSyncStatus(`API error ${response.status}: ${text || response.statusText}`, 'error');
+      return;
+    }
+
+    const json = await response.json();
+    const userData = json.userData || json;
+
+    if (!userData) {
+      setSyncStatus('Unexpected response format from API.', 'error');
+      return;
+    }
+
+    lastSyncPayload = userData;
+    renderSyncResult(userData);
+    setSyncStatus('Data fetched successfully!', 'success');
+
+  } catch (err) {
+    passwordEl.value = '';
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      setSyncStatus(
+        'Network error — the Skycards API may not allow browser requests (CORS). ' +
+        'Try the official shell script instead: github.com/mfkp/skycards-export',
+        'error'
+      );
+    } else {
+      setSyncStatus('Error: ' + err.message, 'error');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Fetch from Skycards';
+  }
+}
+
+function renderSyncResult(data) {
+  const statsEl = document.getElementById('sync-result-stats');
+  const stats = [
+    { label: 'Name', value: data.name || '—' },
+    { label: 'XP', value: (data.xp ?? '—').toLocaleString?.() ?? data.xp ?? '—' },
+    { label: 'Cards', value: data.cards ?? '—' },
+    { label: 'Aircraft Models', value: data.numAircraftModels ?? '—' },
+    { label: 'Destinations', value: data.numDestinations ?? '—' },
+    { label: 'Battle Wins', value: data.numBattleWins ?? '—' },
+    { label: 'Achievements', value: data.numAchievements ?? '—' },
+  ].filter(s => s.value !== '—');
+
+  statsEl.innerHTML = stats.map(s => `
+    <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:0.75rem;text-align:center">
+      <div style="font-size:1.3rem;font-weight:800;color:var(--accent)">${s.value}</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:0.2rem">${s.label}</div>
+    </div>`).join('');
+
+  const regs = Array.isArray(data.uniqueRegs) ? data.uniqueRegs : [];
+  document.getElementById('sync-regs-label').textContent = `${regs.length} unique aircraft registrations`;
+
+  const regsEl = document.getElementById('sync-regs-grid');
+  if (regs.length) {
+    regsEl.innerHTML = regs.map(reg => {
+      const airline = getAirline(reg);
+      const meta = AIRLINES_META[airline] || { color: '#666' };
+      return `<span style="font-family:monospace;font-size:0.78rem;padding:0.2rem 0.5rem;border-radius:6px;
+              border:1px solid ${meta.color}44;color:${meta.color};background:${meta.color}18">${reg}</span>`;
+    }).join('');
+  } else {
+    regsEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.83rem">No registration data in response.</span>';
+  }
+
+  document.getElementById('sync-result').style.display = 'block';
+}
+
+function importSyncData() {
+  if (!lastSyncPayload) return;
+  const regs = Array.isArray(lastSyncPayload.uniqueRegs) ? lastSyncPayload.uniqueRegs : [];
+  if (!regs.length) { showToast('No registrations to import'); return; }
+
+  const s = getSightings();
+  let added = 0, skipped = 0;
+  for (const reg of regs) {
+    if (s[reg]) { skipped++; continue; }
+    s[reg] = { count: 1, special: null, low_confidence: false, addedAt: new Date().toISOString() };
+    added++;
+  }
+  store.sightings = s;
+  saveStore(store);
+  updateHeaderChip();
+  showToast(`Imported ${added} new aircraft (${skipped} already tracked)`);
+  switchTab('collection');
+}
+
+function downloadSyncExport() {
+  if (!lastSyncPayload) return;
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    source: 'skycards-api',
+    ...lastSyncPayload
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `skycards-export-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Export downloaded');
+}
+
+// ============================================================
 //  INIT
 // ============================================================
 populateAirlineDropdowns();
 updateHeaderChip();
 renderOverview();
+initSync();
 </script>
 </body>
 </html>
