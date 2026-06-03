@@ -1111,17 +1111,33 @@ function renderCollection() {
   const airlineFilter = document.getElementById('col-airline').value;
   const sortMode = document.getElementById('col-sort').value;
 
-  let entries = Object.entries(s).map(([reg, data]) => ({ reg, ...data, airline: getAirline(reg) }));
+  let entries = ALL_REGS.map(reg => {
+    const data = s[reg];
+    return {
+      reg,
+      airline: getAirline(reg),
+      caught: !!data,
+      count: data?.count ?? 0,
+      special: data?.special ?? null,
+      low_confidence: data?.low_confidence ?? false,
+    };
+  });
 
   if (search) entries = entries.filter(e => e.reg.includes(search));
   if (airlineFilter) entries = entries.filter(e => e.airline === airlineFilter);
 
-  if (sortMode === 'count-desc') entries.sort((a, b) => b.count - a.count || a.reg.localeCompare(b.reg));
-  else if (sortMode === 'count-asc') entries.sort((a, b) => a.count - b.count || a.reg.localeCompare(b.reg));
-  else if (sortMode === 'airline') entries.sort((a, b) => a.airline.localeCompare(b.airline) || a.reg.localeCompare(b.reg));
-  else entries.sort((a, b) => a.reg.localeCompare(b.reg));
+  if (sortMode === 'count-desc') {
+    entries.sort((a, b) => (b.caught - a.caught) || b.count - a.count || a.reg.localeCompare(b.reg));
+  } else if (sortMode === 'count-asc') {
+    entries.sort((a, b) => (b.caught - a.caught) || a.count - b.count || a.reg.localeCompare(b.reg));
+  } else if (sortMode === 'airline') {
+    entries.sort((a, b) => a.airline.localeCompare(b.airline) || a.reg.localeCompare(b.reg));
+  } else {
+    entries.sort((a, b) => a.reg.localeCompare(b.reg));
+  }
 
-  document.getElementById('col-count').textContent = `${entries.length} aircraft`;
+  const caughtCount = entries.filter(e => e.caught).length;
+  document.getElementById('col-count').textContent = `${caughtCount} / ${entries.length} caught`;
 
   if (!entries.length) {
     document.getElementById('collection-grid').innerHTML = '<div class="empty">No aircraft match your filters.</div>';
@@ -1130,19 +1146,28 @@ function renderCollection() {
 
   document.getElementById('collection-grid').innerHTML = entries.map(e => {
     const meta = AIRLINES_META[e.airline] || { color: '#666' };
-    const isGlow = !!e.special;
-    return `
-      <div class="aircraft-card${isGlow ? ' glow-card' : ''}" onclick="openEditModal('${e.reg}')"
-           style="--stripe:${meta.color}">
-        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${meta.color};border-radius:10px 10px 0 0"></div>
-        <div class="aircraft-reg">${e.reg}</div>
-        <div class="aircraft-airline-label">${meta.flag || ''} ${e.airline}</div>
-        <div class="aircraft-badges">
-          <span class="badge badge-count">×${e.count}</span>
-          ${isGlow ? `<span class="badge badge-glow">✨ ${e.special}</span>` : ''}
-          ${e.low_confidence ? '<span class="badge badge-lowconf">? unverified</span>' : ''}
-        </div>
-      </div>`;
+    if (e.caught) {
+      const isGlow = !!e.special;
+      return `
+        <div class="aircraft-card${isGlow ? ' glow-card' : ''}" onclick="openEditModal('${e.reg}')">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${meta.color};border-radius:10px 10px 0 0"></div>
+          <div class="aircraft-reg">${e.reg}</div>
+          <div class="aircraft-airline-label">${meta.flag || ''} ${e.airline}</div>
+          <div class="aircraft-badges">
+            <span class="badge badge-count">×${e.count}</span>
+            ${isGlow ? `<span class="badge badge-glow">✨ ${e.special}</span>` : ''}
+            ${e.low_confidence ? '<span class="badge badge-lowconf">? unverified</span>' : ''}
+          </div>
+        </div>`;
+    } else {
+      return `
+        <div class="aircraft-card uncaught" onclick="openAddModal('${e.reg}')">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${meta.color};border-radius:10px 10px 0 0;opacity:0.5"></div>
+          <div class="aircraft-reg">${e.reg}</div>
+          <div class="aircraft-airline-label">${meta.flag || ''} ${e.airline}</div>
+          <div style="margin-top:0.5rem;font-size:0.67rem;color:var(--text-muted)">tap to add</div>
+        </div>`;
+    }
   }).join('');
 }
 
