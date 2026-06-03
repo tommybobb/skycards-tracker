@@ -673,13 +673,26 @@
 
       <div id="sync-status" style="display:none;margin-top:1rem;padding:0.85rem 1rem;border-radius:10px;font-size:0.85rem"></div>
 
-      <div id="sync-result" style="display:none;margin-top:1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem">
-        <div class="section-title" style="margin-bottom:1rem">Fetched Data</div>
-        <div id="sync-result-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:0.65rem;margin-bottom:1.25rem"></div>
-        <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.75rem" id="sync-regs-label"></div>
-        <div id="sync-regs-grid" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:1.25rem"></div>
-        <div class="btn-row" style="justify-content:flex-start">
-          <button class="btn btn-primary" onclick="importSyncData()">Import into Tracker</button>
+      <div id="sync-result" style="display:none;margin-top:1rem">
+        <!-- Profile stats -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1rem">
+          <div class="section-title" style="margin-bottom:1rem">Profile — <span id="sync-username" style="color:var(--text);text-transform:none;letter-spacing:0"></span></div>
+          <div id="sync-result-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:0.6rem;margin-bottom:0.85rem"></div>
+          <div id="sync-tier-breakdown"></div>
+          <div id="sync-items"></div>
+        </div>
+        <!-- Cards grid -->
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+            <div class="section-title" style="margin-bottom:0">Cards (<span id="sync-card-count"></span>)</div>
+            <input type="text" class="search-input" id="sync-card-search" placeholder="Search aircraft…"
+                   style="max-width:180px;font-size:0.8rem;padding:0.4rem 0.7rem" oninput="filterSyncCards()">
+          </div>
+          <div id="sync-cards-grid"></div>
+        </div>
+        <!-- Actions -->
+        <div class="btn-row" style="justify-content:flex-start;margin-top:0">
+          <button class="btn btn-primary" onclick="importSyncData()">Import A380s into Tracker</button>
           <button class="btn btn-secondary" onclick="downloadSyncExport()">Download JSON</button>
         </div>
       </div>
@@ -1479,50 +1492,116 @@ async function syncFromSkycards() {
   }
 }
 
-function renderSyncResult(data) {
-  const statsEl = document.getElementById('sync-result-stats');
-  const stats = [
-    { label: 'Name', value: data.name || '—' },
-    { label: 'XP', value: (data.xp ?? '—').toLocaleString?.() ?? data.xp ?? '—' },
-    { label: 'Cards', value: data.cards ?? '—' },
-    { label: 'Aircraft Models', value: data.numAircraftModels ?? '—' },
-    { label: 'Destinations', value: data.numDestinations ?? '—' },
-    { label: 'Battle Wins', value: data.numBattleWins ?? '—' },
-    { label: 'Achievements', value: data.numAchievements ?? '—' },
-  ].filter(s => s.value !== '—');
+const TIER_COLOR = { paper:'#8a9ab5', bronze:'#cd7f32', silver:'#b0b8c4', gold:'#ffd700', platinum:'#8ae8ff' };
+const ITEM_LABEL = { CATCH_AGAIN:'Catch Again', BLUE_SKY:'Blue Sky', CAMERA_STABILIZER:'Stabilizer', RADAR_EXPANDER:'Radar+' };
+let syncAllCards = [];
 
-  statsEl.innerHTML = stats.map(s => `
+function renderSyncResult(data) {
+  document.getElementById('sync-username').textContent = data.name || '';
+
+  // Stats grid
+  const rawRegs = Array.isArray(data.uniqueRegs) ? data.uniqueRegs : [];
+  const regCount = rawRegs.length;
+  const stats = [
+    { label: 'Total XP',     value: (data.xp ?? 0).toLocaleString() },
+    { label: 'Coins',        value: (data.coins ?? 0).toLocaleString() },
+    { label: 'Models',       value: data.numAircraftModels ?? 0 },
+    { label: 'Unique Regs',  value: regCount.toLocaleString() },
+    { label: 'Destinations', value: data.numDestinations ?? 0 },
+    { label: 'Airports Done',value: (data.completedAirportIds ?? []).length },
+    { label: 'Battle Wins',  value: data.numBattleWins ?? 0 },
+    { label: 'Achievements', value: data.numAchievements ?? 0 },
+  ];
+  document.getElementById('sync-result-stats').innerHTML = stats.map(s => `
     <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:0.75rem;text-align:center">
-      <div style="font-size:1.3rem;font-weight:800;color:var(--accent)">${s.value}</div>
-      <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:0.2rem">${s.label}</div>
+      <div style="font-size:1.25rem;font-weight:800;color:var(--accent)">${s.value}</div>
+      <div style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:0.2rem">${s.label}</div>
     </div>`).join('');
 
-  const regs = Array.isArray(data.uniqueRegs) ? data.uniqueRegs : [];
-  document.getElementById('sync-regs-label').textContent = `${regs.length} unique aircraft registrations`;
+  // Tier breakdown
+  const cards = Array.isArray(data.cards) ? data.cards : [];
+  const tierOrder = ['platinum','gold','silver','bronze','paper'];
+  const tierCounts = Object.fromEntries(tierOrder.map(t => [t, 0]));
+  cards.forEach(c => { tierCounts[c.tier] = (tierCounts[c.tier] || 0) + 1; });
+  document.getElementById('sync-tier-breakdown').innerHTML = `
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">
+      <span style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px">Tiers:</span>
+      ${tierOrder.filter(t => tierCounts[t]).map(t => `
+        <span style="font-size:0.76rem;padding:0.15rem 0.5rem;border-radius:8px;font-weight:700;
+               background:${TIER_COLOR[t]}20;color:${TIER_COLOR[t]};border:1px solid ${TIER_COLOR[t]}44">
+          ${t} ×${tierCounts[t]}
+        </span>`).join('')}
+    </div>`;
 
-  const regsEl = document.getElementById('sync-regs-grid');
-  if (regs.length) {
-    regsEl.innerHTML = regs.map(reg => {
-      const airline = getAirline(reg);
-      const meta = AIRLINES_META[airline] || { color: '#666' };
-      return `<span style="font-family:monospace;font-size:0.78rem;padding:0.2rem 0.5rem;border-radius:6px;
-              border:1px solid ${meta.color}44;color:${meta.color};background:${meta.color}18">${reg}</span>`;
-    }).join('');
-  } else {
-    regsEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.83rem">No registration data in response.</span>';
-  }
+  // Items (power-ups)
+  const items = Array.isArray(data.items) ? data.items : [];
+  const itemCounts = {};
+  items.forEach(i => { itemCounts[i.type] = (itemCounts[i.type] || 0) + 1; });
+  document.getElementById('sync-items').innerHTML = Object.keys(itemCounts).length ? `
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;margin-top:0.5rem">
+      <span style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px">Items:</span>
+      ${Object.entries(itemCounts).map(([type, n]) => `
+        <span style="font-size:0.76rem;padding:0.15rem 0.5rem;border-radius:8px;font-weight:600;
+               background:rgba(245,166,35,0.12);color:var(--warn);border:1px solid rgba(245,166,35,0.3)">
+          ${ITEM_LABEL[type] || type} ×${n}
+        </span>`).join('')}
+    </div>` : '';
+
+  // Cards grid
+  document.getElementById('sync-card-count').textContent = cards.length;
+  syncAllCards = [...cards].sort((a, b) => b.xp - a.xp);
+  renderSyncCards(syncAllCards);
 
   document.getElementById('sync-result').style.display = 'block';
 }
 
+function filterSyncCards() {
+  const q = document.getElementById('sync-card-search').value.trim().toLowerCase();
+  const filtered = q
+    ? syncAllCards.filter(c => c.name.toLowerCase().includes(q) ||
+        (c.manufacturer || '').toLowerCase().includes(q) ||
+        c.modelId.toLowerCase().includes(q))
+    : syncAllCards;
+  renderSyncCards(filtered);
+}
+
+function renderSyncCards(cards) {
+  document.getElementById('sync-cards-grid').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.5rem">
+      ${cards.map(c => {
+        const color = TIER_COLOR[c.tier] || '#666';
+        const glows = c.glowCount > 0
+          ? `<span style="font-size:0.65rem;color:var(--glow-color)"> ✨×${c.glowCount}</span>` : '';
+        return `<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:9px;
+                     padding:0.7rem;position:relative;overflow:hidden">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${color}"></div>
+          <div style="font-size:0.8rem;font-weight:700;line-height:1.25;margin-top:0.1rem">${c.name}${glows}</div>
+          <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.1rem">${c.manufacturer || ''}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem">
+            <span style="font-size:0.7rem;color:${color};font-weight:700;text-transform:capitalize">${c.tier}</span>
+            <span style="font-size:0.7rem;color:var(--accent)">${c.xp.toLocaleString()} xp</span>
+          </div>
+          <div style="margin-top:0.3rem;background:var(--border);border-radius:3px;height:4px;overflow:hidden">
+            <div style="width:${c.coverage}%;height:100%;background:${color}"></div>
+          </div>
+          <div style="font-size:0.63rem;color:var(--text-muted);margin-top:0.1rem">${c.coverage}% coverage</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
 function importSyncData() {
   if (!lastSyncPayload) return;
-  const regs = Array.isArray(lastSyncPayload.uniqueRegs) ? lastSyncPayload.uniqueRegs : [];
-  if (!regs.length) { showToast('No registrations to import'); return; }
+  const rawRegs = Array.isArray(lastSyncPayload.uniqueRegs) ? lastSyncPayload.uniqueRegs : [];
+  // uniqueRegs items are {reg, aircraftId} objects
+  const allRegs = rawRegs.map(r => (typeof r === 'string' ? r : r.reg)).filter(Boolean);
+  const a380Regs = allRegs.filter(reg => ALL_REGS.includes(reg));
+
+  if (!a380Regs.length) { showToast('No A380 registrations found in your data'); return; }
 
   const s = getSightings();
   let added = 0, skipped = 0;
-  for (const reg of regs) {
+  for (const reg of a380Regs) {
     if (s[reg]) { skipped++; continue; }
     s[reg] = { count: 1, special: null, low_confidence: false, addedAt: new Date().toISOString() };
     added++;
@@ -1530,8 +1609,8 @@ function importSyncData() {
   store.sightings = s;
   saveStore(store);
   updateHeaderChip();
-  showToast(`Imported ${added} new aircraft (${skipped} already tracked)`);
-  switchTab('collection');
+  showToast(`Imported ${added} A380s (${skipped} already tracked)`);
+  if (added > 0) switchTab('collection');
 }
 
 function downloadSyncExport() {
