@@ -1292,13 +1292,19 @@ function deleteSighting() {
 // ============================================================
 let currentTab = 'overview';
 
-function switchTab(tab) {
+function switchTab(tab, pushHistory = true) {
   currentTab = tab;
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.getElementById('view-' + tab).classList.add('active');
+  if (pushHistory) history.pushState({ tab }, '', '#' + tab);
   refreshCurrentView();
 }
+
+window.addEventListener('popstate', e => {
+  const tab = e.state?.tab || 'overview';
+  switchTab(tab, false);
+});
 
 function refreshCurrentView() {
   if (currentTab === 'overview') renderOverview();
@@ -1701,7 +1707,10 @@ document.addEventListener('keydown', e => {
 // ============================================================
 populateAirlineDropdowns();
 updateHeaderChip();
-renderOverview();
+const _initTab = location.hash.slice(1) || 'overview';
+history.replaceState({ tab: _initTab }, '', '#' + _initTab);
+if (_initTab !== 'overview') switchTab(_initTab, false);
+else renderOverview();
 initSync();
 </script>
 </body>
