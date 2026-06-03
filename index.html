@@ -681,15 +681,6 @@
           <div id="sync-tier-breakdown"></div>
           <div id="sync-items"></div>
         </div>
-        <!-- Cards grid -->
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1rem">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
-            <div class="section-title" style="margin-bottom:0">Cards (<span id="sync-card-count"></span>)</div>
-            <input type="text" class="search-input" id="sync-card-search" placeholder="Search aircraft…"
-                   style="max-width:180px;font-size:0.8rem;padding:0.4rem 0.7rem" oninput="filterSyncCards()">
-          </div>
-          <div id="sync-cards-grid"></div>
-        </div>
         <!-- Actions -->
         <div class="btn-row" style="justify-content:flex-start;margin-top:0">
           <button class="btn btn-primary" onclick="importSyncData()">Import A380s into Tracker</button>
@@ -1371,7 +1362,6 @@ async function syncFromSkycards() {
 
 const TIER_COLOR = { paper:'#8a9ab5', bronze:'#cd7f32', silver:'#b0b8c4', gold:'#ffd700', platinum:'#8ae8ff' };
 const ITEM_LABEL = { CATCH_AGAIN:'Catch Again', BLUE_SKY:'Blue Sky', CAMERA_STABILIZER:'Stabilizer', RADAR_EXPANDER:'Radar+' };
-let syncAllCards = [];
 
 function renderSyncResult(data) {
   document.getElementById('sync-username').textContent = data.name || '';
@@ -1424,70 +1414,27 @@ function renderSyncResult(data) {
         </span>`).join('')}
     </div>` : '';
 
-  // Cards grid
-  document.getElementById('sync-card-count').textContent = cards.length;
-  syncAllCards = [...cards].sort((a, b) => b.xp - a.xp);
-  renderSyncCards(syncAllCards);
-
   document.getElementById('sync-result').style.display = 'block';
-}
-
-function filterSyncCards() {
-  const q = document.getElementById('sync-card-search').value.trim().toLowerCase();
-  const filtered = q
-    ? syncAllCards.filter(c => c.name.toLowerCase().includes(q) ||
-        (c.manufacturer || '').toLowerCase().includes(q) ||
-        c.modelId.toLowerCase().includes(q))
-    : syncAllCards;
-  renderSyncCards(filtered);
-}
-
-function renderSyncCards(cards) {
-  document.getElementById('sync-cards-grid').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:0.5rem">
-      ${cards.map(c => {
-        const color = TIER_COLOR[c.tier] || '#666';
-        const glows = c.glowCount > 0
-          ? `<span style="font-size:0.65rem;color:var(--glow-color)"> ✨×${c.glowCount}</span>` : '';
-        return `<div style="background:var(--bg-input);border:1px solid var(--border);border-radius:9px;
-                     padding:0.7rem;position:relative;overflow:hidden">
-          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${color}"></div>
-          <div style="font-size:0.8rem;font-weight:700;line-height:1.25;margin-top:0.1rem">${c.name}${glows}</div>
-          <div style="font-size:0.65rem;color:var(--text-muted);margin-top:0.1rem">${c.manufacturer || ''}</div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem">
-            <span style="font-size:0.7rem;color:${color};font-weight:700;text-transform:capitalize">${c.tier}</span>
-            <span style="font-size:0.7rem;color:var(--accent)">${c.xp.toLocaleString()} xp</span>
-          </div>
-          <div style="margin-top:0.3rem;background:var(--border);border-radius:3px;height:4px;overflow:hidden">
-            <div style="width:${c.coverage}%;height:100%;background:${color}"></div>
-          </div>
-          <div style="font-size:0.63rem;color:var(--text-muted);margin-top:0.1rem">${c.coverage}% coverage</div>
-        </div>`;
-      }).join('')}
-    </div>`;
 }
 
 function importSyncData() {
   if (!lastSyncPayload) return;
   const rawRegs = Array.isArray(lastSyncPayload.uniqueRegs) ? lastSyncPayload.uniqueRegs : [];
-  // uniqueRegs items are {reg, aircraftId} objects
-  const allRegs = rawRegs.map(r => (typeof r === 'string' ? r : r.reg)).filter(Boolean);
-  const a380Regs = allRegs.filter(reg => ALL_REGS.includes(reg));
+  const a380Regs = rawRegs
+    .map(r => (typeof r === 'string' ? r : r.reg))
+    .filter(reg => reg && ALL_REGS.includes(reg));
 
   if (!a380Regs.length) { showToast('No A380 registrations found in your data'); return; }
 
-  const s = getSightings();
-  let added = 0, skipped = 0;
+  const sightings = {};
   for (const reg of a380Regs) {
-    if (s[reg]) { skipped++; continue; }
-    s[reg] = { count: 1, special: null, low_confidence: false, addedAt: new Date().toISOString() };
-    added++;
+    sightings[reg] = { count: 1, special: null, low_confidence: false, addedAt: new Date().toISOString() };
   }
-  store.sightings = s;
+  store.sightings = sightings;
   saveStore(store);
   updateHeaderChip();
-  showToast(`Imported ${added} A380s (${skipped} already tracked)`);
-  if (added > 0) switchTab('collection');
+  showToast(`Collection replaced — ${a380Regs.length} A380s imported`);
+  switchTab('collection');
 }
 
 function downloadSyncExport() {
