@@ -1011,7 +1011,9 @@ async function fetchModelSync() {
   try { cached = JSON.parse(localStorage.getItem(MODELS_KEY) || 'null'); } catch(e) {}
   const updatedAt = cached?.updatedAt || 0;
   try {
-    const res = await fetch(`https://api.skycards.oldapes.com/models?updatedAt=${updatedAt}`);
+    const res = await fetch(`https://api.skycards.oldapes.com/models?updatedAt=${updatedAt}`, {
+      headers: { 'x-client-version': '2.1.3', 'User-Agent': 'okhttp/4.12.0' }
+    });
     if (!res.ok) return;
     const json = await res.json();
     // Find the A380 model row (id A388 or name containing "380")
@@ -1054,7 +1056,9 @@ async function debugModelSync() {
 
   const url = `https://api.skycards.oldapes.com/models?updatedAt=${updatedAt}`;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: { 'x-client-version': '2.1.3', 'User-Agent': 'okhttp/4.12.0' }
+    });
     const text = await res.text();
     let parsed = null;
     try { parsed = JSON.parse(text); } catch(e) {}
