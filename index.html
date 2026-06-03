@@ -1016,12 +1016,13 @@ async function fetchModelSync() {
     });
     if (!res.ok) return;
     const json = await res.json();
-    // Find the A380 model row (id A388 or name containing "380")
-    const a380Row = Array.isArray(json.rows)
-      ? json.rows.find(r => r.id === 'A388' || (typeof r.name === 'string' && r.name.includes('380')))
-      : null;
-    // If A380 not in rows it hasn't changed — keep cached count
-    const newCount = a380Row ? a380Row.num : (cached?.a380Count ?? null);
+    // Sum all A380-related rows (handles variants like A380F alongside A388)
+    const a380Rows = Array.isArray(json.rows)
+      ? json.rows.filter(r => r.id === 'A388' || (typeof r.name === 'string' && r.name.includes('380')))
+      : [];
+    const summedCount = a380Rows.reduce((t, r) => t + (r.num || 0), 0);
+    // If no A380 rows returned, model hasn't changed — keep cached count
+    const newCount = a380Rows.length ? summedCount : (cached?.a380Count ?? null);
     if (typeof newCount === 'number') {
       modelFleetSize = newCount;
       localStorage.setItem(MODELS_KEY, JSON.stringify({
@@ -1063,21 +1064,25 @@ async function debugModelSync() {
     let parsed = null;
     try { parsed = JSON.parse(text); } catch(e) {}
 
-    const a380Row = parsed?.rows?.find(r => r.id === 'A388' || (typeof r.name === 'string' && r.name.includes('380')));
+    const a380Rows = parsed?.rows?.filter(r => r.id === 'A388' || (typeof r.name === 'string' && r.name.includes('380'))) ?? [];
+    const summedCount = a380Rows.reduce((t, r) => t + (r.num || 0), 0);
     const statusLine = `HTTP ${res.status} ${res.statusText}`;
-    const a380Line = a380Row
-      ? `✅ A380 row found — num: ${a380Row.num}`
-      : (parsed?.rows ? `⚠️ No A380 row in response (${parsed.rows.length} rows returned)` : '⚠️ Could not parse rows');
+    const rowSummary = a380Rows.length
+      ? a380Rows.map(r => `  ${r.id} "${r.name}" num=${r.num}`).join('\n')
+      : '  (none)';
+    const a380Line = a380Rows.length
+      ? `✅ ${a380Rows.length} A380 row(s) — total num: ${summedCount}`
+      : (parsed?.rows ? `⚠️ No A380 rows in response (${parsed.rows.length} total rows)` : '⚠️ Could not parse rows');
 
-    out.textContent = `--- ${statusLine} ---\n${a380Line}\n\n${parsed ? JSON.stringify(parsed, null, 2) : text}`;
+    out.textContent = `--- ${statusLine} ---\n${a380Line}\nMatching rows:\n${rowSummary}\n\nFull response:\n${parsed ? JSON.stringify(parsed, null, 2) : text}`;
     out.style.display = 'block';
     info.innerHTML += `<br><strong>Result:</strong> ${statusLine} — ${a380Line}`;
 
-    if (a380Row) {
-      modelFleetSize = a380Row.num;
+    if (a380Rows.length) {
+      modelFleetSize = summedCount;
       localStorage.setItem(MODELS_KEY, JSON.stringify({
         updatedAt: parsed.updatedAt ?? updatedAt,
-        a380Count: a380Row.num,
+        a380Count: summedCount,
         fetchedAt: Date.now()
       }));
       updateHeaderChip();
