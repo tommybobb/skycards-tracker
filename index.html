@@ -848,120 +848,6 @@ function getAirline(reg) {
 const ALL_REGS = Object.values(FULL_FLEET).flat();
 
 // ============================================================
-//  INITIAL DATA — from your Skycards screenshot transcription
-// ============================================================
-const INITIAL_DATA = [
-  {"registration":"A6-EVS","count":2},
-  {"registration":"A6-EDF","count":3},
-  {"registration":"A6-EDO","count":1},
-  {"registration":"A6-EUK","count":4},
-  {"registration":"A6-APE","count":3},
-  {"registration":"A6-EEF","count":1},
-  {"registration":"A6-APC","count":1},
-  {"registration":"A6-EVH","count":2},
-  {"registration":"A6-EEL","count":3},
-  {"registration":"G-XLEC","count":7},
-  {"registration":"A6-EEH","count":1},
-  {"registration":"A6-EOH","count":1},
-  {"registration":"A6-EOC","count":2},
-  {"registration":"A6-EUO","count":2},
-  {"registration":"A6-EED","count":2},
-  {"registration":"A6-EVF","count":2},
-  {"registration":"A6-EOE","count":2},
-  {"registration":"A6-EEI","count":3},
-  {"registration":"A6-EDY","count":2},
-  {"registration":"A6-EDZ","count":3},
-  {"registration":"A6-EUU","count":5},
-  {"registration":"A6-EOB","count":2},
-  {"registration":"A6-EDX","count":3},
-  {"registration":"A6-EOA","count":2},
-  {"registration":"A6-EUG","count":1},
-  {"registration":"A6-EOF","count":1},
-  {"registration":"A6-EDU","count":2},
-  {"registration":"A6-EEX","count":4},
-  {"registration":"G-XLEL","count":4},
-  {"registration":"G-XLEB","count":3},
-  {"registration":"A6-EUD","count":3},
-  {"registration":"A6-EUT","count":5},
-  {"registration":"A6-EVC","count":2},
-  {"registration":"9V-SKU","count":1},
-  {"registration":"A6-EOR","count":1},
-  {"registration":"A6-EDV","count":2},
-  {"registration":"A6-EVQ","count":1},
-  {"registration":"A6-EEA","count":2},
-  {"registration":"9V-SKY","count":2},
-  {"registration":"9V-SKW","count":1},
-  {"registration":"A6-EOT","count":3},
-  {"registration":"9V-SKT","count":3,"special":"GLOW"},
-  {"registration":"A6-EUQ","count":2},
-  {"registration":"G-XLEK","count":3},
-  {"registration":"G-XLEM","count":3},
-  {"registration":"A6-EVE","count":2},
-  {"registration":"A6-EOI","count":2},
-  {"registration":"A6-EEY","count":3},
-  {"registration":"A6-EUF","count":3},
-  {"registration":"A6-APF","count":1},
-  {"registration":"G-XLEE","count":5,"low_confidence":true},
-  {"registration":"A6-EVN","count":1},
-  {"registration":"A6-EOD","count":1},
-  {"registration":"A6-EEC","count":3},
-  {"registration":"A6-EOO","count":4},
-  {"registration":"A6-EUV","count":2},
-  {"registration":"A6-EEB","count":2},
-  {"registration":"9V-SKQ","count":2},
-  {"registration":"A6-EUX","count":5},
-  {"registration":"G-XLEG","count":3},
-  {"registration":"9V-SKN","count":1},
-  {"registration":"G-XLED","count":3},
-  {"registration":"A6-API","count":1},
-  {"registration":"D-AIMM","count":3},
-  {"registration":"A6-EUR","count":1},
-  {"registration":"A6-EEG","count":1,"low_confidence":true},
-  {"registration":"D-AIMA","count":3},
-  {"registration":"A6-EDJ","count":2,"low_confidence":true},
-  {"registration":"A6-EOG","count":2},
-  {"registration":"A6-EOU","count":1},
-  {"registration":"A6-EUN","count":3,"low_confidence":true},
-  {"registration":"A6-EUC","count":2},
-  {"registration":"A6-EVL","count":2},
-  {"registration":"A6-APN","count":2},
-  {"registration":"A6-EUJ","count":1},
-  {"registration":"A6-EVG","count":4},
-  {"registration":"A6-EUI","count":1,"low_confidence":true},
-  {"registration":"A6-EEZ","count":2},
-  {"registration":"A6-EEJ","count":2},
-  {"registration":"A6-EVJ","count":1},
-  {"registration":"A6-EUS","count":1},
-  {"registration":"A6-EEW","count":3},
-  {"registration":"A6-EOJ","count":1},
-  {"registration":"A6-EVM","count":1},
-  {"registration":"A6-EEU","count":1,"low_confidence":true},
-  {"registration":"A6-EOL","count":1},
-  {"registration":"A6-EVR","count":1},
-  {"registration":"A6-EEP","count":1},
-  {"registration":"A6-EDK","count":1},
-  {"registration":"G-XLEA","count":2},
-  {"registration":"9V-SKV","count":1},
-  {"registration":"VH-OQJ","count":1},
-  {"registration":"D-AIMC","count":3},
-  {"registration":"D-AIMB","count":3},
-  {"registration":"A6-EUZ","count":2},
-  {"registration":"VH-OQA","count":3},
-  {"registration":"D-AIMH","count":2,"special":"GLOW"},
-  {"registration":"D-AIMK","count":1},
-  {"registration":"A6-APO","count":1},
-  {"registration":"VH-OQL","count":1},
-  {"registration":"9V-SKZ","count":1},
-  {"registration":"VH-OQD","count":1},
-  {"registration":"A6-EEO","count":1},
-  {"registration":"VH-OQK","count":1},
-  {"registration":"A6-EEM","count":1},
-  {"registration":"A6-EEE","count":2},
-  {"registration":"A6-EDQ","count":1},
-  {"registration":"A6-EVO","count":1}
-];
-
-// ============================================================
 //  STORAGE
 // ============================================================
 const STORE_KEY = 'skycards_a380_v1';
@@ -971,26 +857,7 @@ function loadStore() {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) return JSON.parse(raw);
   } catch(e) {}
-  // First run — seed from initial data
-  const sightings = {};
-  for (const item of INITIAL_DATA) {
-    // Deduplicate: if reg already exists keep higher count
-    if (sightings[item.registration]) {
-      if (item.count > sightings[item.registration].count) {
-        sightings[item.registration].count = item.count;
-      }
-      if (!item.low_confidence) delete sightings[item.registration].low_confidence;
-      if (item.special) sightings[item.registration].special = item.special;
-    } else {
-      sightings[item.registration] = {
-        count: item.count,
-        special: item.special || null,
-        low_confidence: item.low_confidence || false,
-        addedAt: new Date().toISOString()
-      };
-    }
-  }
-  const store = { sightings, version: 1, createdAt: new Date().toISOString() };
+  const store = { sightings: {}, version: 1, createdAt: new Date().toISOString() };
   saveStore(store);
   return store;
 }
