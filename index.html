@@ -566,6 +566,128 @@
     }
     .toast.show { transform: translateY(0); opacity: 1; }
 
+    /* ---- QUICK SEARCH ---- */
+    .qs-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      z-index: 250;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 12vh 1rem 1rem;
+      backdrop-filter: blur(3px);
+    }
+    .qs-overlay.open { display: flex; }
+
+    .qs-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+      overflow: hidden;
+    }
+
+    .qs-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .qs-search-icon { font-size: 1rem; opacity: 0.55; flex-shrink: 0; }
+
+    .qs-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 1.1rem;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+    }
+    .qs-input::placeholder {
+      color: var(--text-muted);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-weight: 400;
+      letter-spacing: 0;
+      font-size: 0.95rem;
+    }
+
+    .qs-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.15rem 0.45rem;
+    }
+
+    .qs-result { padding: 1.1rem 1.25rem; min-height: 72px; }
+
+    .qs-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.87rem;
+      padding: 0.6rem 0;
+    }
+
+    .qs-card {
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      border: 1px solid;
+    }
+    .qs-card.caught  { background: rgba(61,202,110,0.08);  border-color: rgba(61,202,110,0.3); }
+    .qs-card.missing { background: rgba(229,83,83,0.08);   border-color: rgba(229,83,83,0.25); }
+
+    .qs-reg {
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      margin-bottom: 0.2rem;
+    }
+    .qs-reg.caught  { color: var(--success); }
+    .qs-reg.missing { color: var(--danger); }
+
+    .qs-airline { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.7rem; }
+
+    .qs-status {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.85rem;
+    }
+    .qs-status-label { font-size: 0.82rem; font-weight: 600; }
+    .qs-status-label.caught  { color: var(--success); }
+    .qs-status-label.missing { color: var(--danger); }
+
+    .qs-suggestions { padding: 0.85rem 1.25rem 1.1rem; }
+    .qs-suggest-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .qs-suggest-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .qs-chip {
+      cursor: pointer;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.35rem 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: border-color 0.15s;
+    }
+    .qs-chip:hover { border-color: var(--accent); }
+    .qs-chip.have { border-color: rgba(61,202,110,0.35); }
+    .qs-chip-reg { font-family: 'Courier New', monospace; font-size: 0.84rem; font-weight: 600; }
+    .qs-chip-tick { font-size: 0.72rem; }
+
     /* ---- RESPONSIVE ---- */
     @media (max-width: 600px) {
       header { padding: 0.75rem 1rem; }
@@ -573,6 +695,7 @@
       nav { padding: 0 0.5rem; }
       .aircraft-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
       .header-right .btn-icon { display: none; }
+      .qs-overlay { padding: 6vh 0.75rem 1rem; }
     }
   </style>
 </head>
@@ -586,6 +709,7 @@
   </div>
   <div class="header-right">
     <div class="progress-chip" id="header-chip">Loading…</div>
+    <button class="btn-icon" onclick="openQuickSearch()" title="Quick registration lookup (/)">🔍 Search</button>
     <button class="btn-icon" onclick="exportData()" title="Export collection as JSON">Export</button>
     <button class="btn-icon" onclick="triggerImport()" title="Import JSON backup">Import</button>
     <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
@@ -734,6 +858,21 @@
         <button class="btn btn-primary" onclick="saveSighting()">Save</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- QUICK SEARCH OVERLAY -->
+<div class="qs-overlay" id="qs-overlay" onclick="onQsOverlayClick(event)">
+  <div class="qs-box">
+    <div class="qs-input-wrap">
+      <span class="qs-search-icon">🔍</span>
+      <input type="text" id="qs-input" class="qs-input"
+             placeholder="Type a registration…"
+             oninput="this.value=this.value.toUpperCase();onQuickSearchInput()"
+             autocomplete="off" spellcheck="false">
+      <span class="qs-hint">ESC</span>
+    </div>
+    <div id="qs-result"></div>
   </div>
 </div>
 
@@ -1453,6 +1592,113 @@ function downloadSyncExport() {
   URL.revokeObjectURL(url);
   showToast('Export downloaded');
 }
+
+// ============================================================
+//  QUICK SEARCH
+// ============================================================
+function openQuickSearch() {
+  document.getElementById('qs-result').innerHTML =
+    '<div class="qs-empty">Type a registration to look it up…</div>';
+  document.getElementById('qs-input').value = '';
+  document.getElementById('qs-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('qs-input').focus(), 40);
+}
+
+function closeQuickSearch() {
+  document.getElementById('qs-overlay').classList.remove('open');
+  document.getElementById('qs-input').value = '';
+}
+
+function onQsOverlayClick(e) {
+  if (e.target === document.getElementById('qs-overlay')) closeQuickSearch();
+}
+
+function onQuickSearchInput() {
+  const reg = document.getElementById('qs-input').value.trim();
+  const el = document.getElementById('qs-result');
+
+  if (!reg) {
+    el.innerHTML = '<div class="qs-empty">Type a registration to look it up…</div>';
+    return;
+  }
+
+  const s = getSightings();
+  const sighting = s[reg];
+  const inFleet = ALL_REGS.includes(reg);
+
+  if (sighting || inFleet) {
+    const airline = getAirline(reg);
+    const meta = AIRLINES_META[airline] || { color: '#607D8B', flag: '✈️' };
+    const airlineLabel = airline !== 'Unknown' ? `${meta.flag} ${airline}` : '';
+
+    if (sighting) {
+      el.innerHTML = `
+        <div class="qs-card caught">
+          <div class="qs-reg caught">${reg}</div>
+          <div class="qs-airline">${airlineLabel}</div>
+          <div class="qs-status">
+            <span class="qs-status-label caught">✓ In your collection</span>
+            <span class="badge badge-count">×${sighting.count}</span>
+            ${sighting.special ? `<span class="badge badge-glow">✨ ${sighting.special}</span>` : ''}
+            ${sighting.low_confidence ? '<span class="badge badge-lowconf">? unverified</span>' : ''}
+          </div>
+          <button class="btn btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem"
+                  onclick="closeQuickSearch();openEditModal('${reg}')">Edit</button>
+        </div>`;
+    } else {
+      el.innerHTML = `
+        <div class="qs-card missing">
+          <div class="qs-reg missing">${reg}</div>
+          <div class="qs-airline">${airlineLabel}</div>
+          <div class="qs-status">
+            <span class="qs-status-label missing">✗ Not in your collection</span>
+          </div>
+          <button class="btn btn-primary" style="font-size:0.8rem;padding:0.4rem 0.9rem"
+                  onclick="closeQuickSearch();openAddModal('${reg}')">Log it</button>
+        </div>`;
+    }
+    return;
+  }
+
+  // Not an exact match — show partial suggestions
+  const partial = ALL_REGS.filter(r => r.startsWith(reg)).slice(0, 8);
+  if (partial.length) {
+    const chips = partial.map(r => {
+      const have = !!s[r];
+      return `<div class="qs-chip${have ? ' have' : ''}"
+                   onclick="document.getElementById('qs-input').value='${r}';onQuickSearchInput()">
+        <span class="qs-chip-reg">${r}</span>
+        <span class="qs-chip-tick" style="color:${have ? 'var(--success)' : 'var(--text-muted)'}">
+          ${have ? '✓' : '—'}
+        </span>
+      </div>`;
+    }).join('');
+    el.innerHTML = `
+      <div class="qs-suggestions">
+        <div class="qs-suggest-label">Matching registrations</div>
+        <div class="qs-suggest-chips">${chips}</div>
+      </div>`;
+  } else {
+    el.innerHTML = '<div class="qs-empty">No A380 found with that registration.</div>';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  const qs = document.getElementById('qs-overlay');
+  if (e.key === 'Escape') {
+    if (qs.classList.contains('open')) { closeQuickSearch(); return; }
+    closeModal();
+    return;
+  }
+  if (e.key === '/' && !qs.classList.contains('open') &&
+      !document.getElementById('modal').classList.contains('open')) {
+    const tag = document.activeElement?.tagName;
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+      e.preventDefault();
+      openQuickSearch();
+    }
+  }
+});
 
 // ============================================================
 //  INIT
